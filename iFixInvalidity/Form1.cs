@@ -13,15 +13,19 @@ using TopSolid.Cad.Drafting.Automating;
 using TopSolid.Kernel.Automating;
 using TSH = TopSolid.Kernel.Automating.TopSolidHost;
 using System.IO;
+using System.Security;
 
 namespace iFixInvalidity
 {
     public partial class Form1 : Form
     {
+        public object TopSolidDesign { get; private set; }
+
         public Form1()
         {
             InitializeComponent();
             ConnectToTopSolid(); // Connexion à TopSolid au lancement de l'application
+            ConnectToTopSolidDesignHost();
         }
 
         
@@ -42,7 +46,45 @@ namespace iFixInvalidity
             }
         }
 
-      
+        private void ConnectToTopSolidDesignHost()
+        {
+            try
+            {
+                // Vérifier si la connexion est déjà établie
+                if (!TopSolidDesignHost.IsConnected)
+                {
+                    // Connexion à TopSolid avec un paramètre d'initialisation (si nécessaire)
+                    TopSolidDesignHost.Connect();
+
+                    // Vérifier à nouveau si la connexion est réussie
+                    if (TopSolidDesignHost.IsConnected)
+                    {
+                        MessageBox.Show("Connexion réussie à TopSolid.", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Connexion échouée à TopSolid.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("TopSolid est déjà connecté.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Gérer une exception spécifique si nécessaire
+                MessageBox.Show($"Problème opérationnel : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (Exception ex)
+            {
+                // Gérer d'autres exceptions
+                MessageBox.Show($"Erreur lors de la connexion à TopSolid : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+        }
+
+
         // Récupère l'identifiant du document courant.
         private DocumentId DocumentCourant()
         {
@@ -72,6 +114,10 @@ namespace iFixInvalidity
             }
         }
 
+
+
+
+        //récupere element id du dossier publication
         private ElementId PublishFolder(DocumentId documentCourantId)
         {
 
@@ -100,6 +146,8 @@ namespace iFixInvalidity
 
         }
 
+
+        //recupere le contenu du dossier publication
         private ElementId PublicationsId (ElementId PublishFolderId, String NomParametreTxt)
         {
 
@@ -150,7 +198,7 @@ namespace iFixInvalidity
         }
 
 
-
+        //creer une liste du contenu du dossier publication
         private List<ElementId> PublishedElements(ElementId PublishFolderId)
         {
             if (PublishFolderId != null)
@@ -177,6 +225,8 @@ namespace iFixInvalidity
   
         }
 
+
+        //récupere le nom des parametres du dossier publication
         private List<string> NamesPublishedElements(List<ElementId> ElementsPubliedIds)
         {
 
@@ -201,7 +251,7 @@ namespace iFixInvalidity
 
         }
 
-
+        //récupere dossier parametre
         private ElementId ParametresFolder(DocumentId documentCourantId)
         {
 
@@ -230,6 +280,8 @@ namespace iFixInvalidity
 
         }
 
+
+        //récupere une liste du contenu du dossier parametre
         private List<ElementId> ParametresElements(ElementId ParametreFolderId)
         {
             if (ParametreFolderId != null)
@@ -260,7 +312,7 @@ namespace iFixInvalidity
         
         
        
-        
+       //verifie si les parametre du dossier parametre sont invalide
         
         private ElementId ParametreIsInValide (List<ElementId> ParametresdIds)
         {
@@ -284,15 +336,20 @@ namespace iFixInvalidity
         }
 
         
-
+        //verifie si les operations de l'arbre des operation sont valide
         public ElementId ParamInvalide (DocumentId documentCourantId)
         {
 
             List<ElementId> OperationsId = TSH.Operations.GetOperations(documentCourantId);
 
+
+
             foreach (ElementId OperationId in OperationsId)
             {
-               
+                string namesOperationsTxt = TSH.Elements.GetName(OperationId);
+                
+                MessageBox.Show(namesOperationsTxt);
+
                 bool IsInvalide = TSH.Elements.IsInvalid(OperationId);
                 if (IsInvalide)
                 {
@@ -305,10 +362,54 @@ namespace iFixInvalidity
 
         }
    
+        //recupere le nom des enfant d'une operation et l'affiche dans une txtbox
+
+
+    private void NomElementOperation(DocumentId documentCourantId)
+        {
+            try
+            {
+
+                List<ElementId> ElementsId = TSH.Operations.GetOperations(documentCourantId);
+
+                if(ElementsId != null)
+                {
+
+
+                    foreach(ElementId ElementId in ElementsId)
+                    {
+                        List<ElementId> ElementIdNames = TSH.Operations.GetChildren(ElementId);
+
+                        foreach (ElementId ElementIdName in ElementIdNames)
+                        {
+                            string ElementIdNamTxt = TSH.Elements.GetName(ElementIdName);
+
+                            MessageBox.Show(ElementIdNamTxt);
 
 
 
+                        }
 
+
+                    }
+            
+                }
+                else
+                {
+                    MessageBox.Show("la liste est vide");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erreur lors de la récupération nom de l'entité de l'operation : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                
+            }
+
+        }
+
+
+        //reconecte le parametre suivant l'indexe
         private void Fixit(ElementId OperationId, List<SmartText> ParametresSmartTxts, int IndexSmartTxt)
         {
            
@@ -354,6 +455,65 @@ namespace iFixInvalidity
 
         //private ElementId ParametreId(DocumentId ) {
 
+        //Récuperation des parametres de derivation---------------------------------------------------------------------------------------------------------------------------------
+
+        private void ObtenirDerivation(DocumentId documentCourantId) {
+
+            bool derivé =  TopSolidDesignHost.Tools.IsDerived(documentCourantId);
+
+
+
+            if (derivé) { 
+
+            TopSolidDesignHost.Tools.GetDerivationInheritances(documentCourantId,
+                                            out bool outName,
+                                            out bool outDescription,
+                                            out bool outCode,
+                                            out bool outPartNumber,
+                                            out bool outComplementaryPartNumber,
+                                            out bool outManufacturer,
+                                            out bool outManufacturerPartNumber,
+                                            out bool outComment,
+                                            out List<ElementId> outOtherSystemParameters,
+                                            out bool outNonSystemParameters,
+                                            out bool outPoints,
+                                            out bool outAxes,
+                                            out bool outPlanes,
+                                            out bool outFrames,
+                                            out bool outSketches,
+                                            out bool outShapes,
+                                            out bool outPublishings,
+                                            out bool outFunctions,
+                                            out bool outSymmetries,
+                                            out bool outUnsectionabilities,
+                                            out bool outRepresentations,
+                                            out bool outSets,
+                                            out bool outCameras
+                                        );
+                string message = "Variables et leurs valeurs :\n" + $"outName: {outName}\n" + $"outDescription: {outDescription}\n" + $"outCode: {outCode}\n" + $"outPartNumber: {outPartNumber}\n" + $"outComplementaryPartNumber: {outComplementaryPartNumber}\n" + $"outManufacturer: {outManufacturer}\n" + $"outManufacturerPartNumber: {outManufacturerPartNumber}\n" + $"outComment: {outComment}\n" + $"outOtherSystemParameters: {string.Join(", ", outOtherSystemParameters ?? new List<ElementId>())}\n" + $"outNonSystemParameters: {outNonSystemParameters}\n" + $"outPoints: {outPoints}\n" + $"outAxes: {outAxes}\n" + $"outPlanes: {outPlanes}\n" + $"outFrames: {outFrames}\n" + $"outSketches: {outSketches}\n" + $"outShapes: {outShapes}\n" + $"outPublishings: {outPublishings}\n" + $"outFunctions: {outFunctions}\n" + $"outSymmetries: {outSymmetries}\n" + $"outUnsectionabilities: {outUnsectionabilities}\n" + $"outRepresentations: {outRepresentations}\n" + $"outSets: {outSets}\n" + $"outCameras: {outCameras}";
+                MessageBox.Show(message, "Valeurs des Variables", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+
+            }
+            else
+            {
+                MessageBox.Show("le document n'est pas adapté a la derivation");
+            } 
+        }
+
+
+        private void GetCommentaire(DocumentId documentCourantId)
+        {
+
+            ElementId commentId = TSH.Parameters.GetCommentParameter(documentCourantId);
+
+
+            string commentTxt = TSH.Parameters.GetTextValue(commentId);
+
+
+            MessageBox.Show(commentTxt);
+
+        }
 
 
 
@@ -391,6 +551,11 @@ namespace iFixInvalidity
                 MessageBox.Show($"Une erreur s'est produite : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
  
             }
+
+            //GetCommentaire(documentCourantId);
+            //ObtenirDerivation(documentCourantId);
+
+
 
 
             ElementId PublishFolderId = PublishFolder(documentCourantId);
@@ -435,12 +600,12 @@ namespace iFixInvalidity
             
             ElementId OperationId = ParamInvalide(documentCourantId);
 
+            NomElementOperation(documentCourantId);
 
-            
 
             Fixit(OperationId, SmartTxtList, number0);
             OperationId = ParamInvalide(documentCourantId);
-
+            NomElementOperation(documentCourantId);
             Fixit(OperationId, SmartTxtList, number1);
             OperationId = ParamInvalide(documentCourantId);
             // Fixit(OperationId, SmartTxtList, number2);
