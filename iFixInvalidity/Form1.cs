@@ -84,16 +84,16 @@ namespace iFixInvalidity
                     // Vérifier à nouveau si la connexion est réussie
                     if (TopSolidDesignHost.IsConnected)
                     {
-                        MessageBox.Show("Connexion réussie à TopSolid.", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show("Connexion réussie à TopSolid module design.", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     else
                     {
-                        MessageBox.Show("Connexion échouée à TopSolid.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Connexion échouée à TopSolid module design.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
                 else
                 {
-                    MessageBox.Show("TopSolid est déjà connecté.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("TopSolid module design est déjà connecté.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch (InvalidOperationException ex)
@@ -104,7 +104,7 @@ namespace iFixInvalidity
             catch (Exception ex)
             {
                 // Gérer d'autres exceptions
-                MessageBox.Show($"Erreur lors de la connexion à TopSolid : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Erreur lors de la connexion à TopSolid module design : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
         }
@@ -373,7 +373,7 @@ namespace iFixInvalidity
             {
                 string namesOperationsTxt = TSH.Elements.GetName(OperationId);
 
-                MessageBox.Show(namesOperationsTxt);
+                //MessageBox.Show(namesOperationsTxt);
 
                 bool IsInvalide = TSH.Elements.IsInvalid(OperationId);
                 if (IsInvalide)
@@ -409,7 +409,7 @@ namespace iFixInvalidity
                         {
                             string ElementIdNamTxt = TSH.Elements.GetName(ElementIdName);
 
-                            MessageBox.Show(ElementIdNamTxt);
+                            //MessageBox.Show(ElementIdNamTxt);
 
 
 
@@ -442,10 +442,8 @@ namespace iFixInvalidity
             if (OperationId != null)
             {
 
+               
 
-                if (!TopSolidHost.Application.StartModification("My Action", false)) return;
-                try
-                {
                     SmartText SmartTxt = new SmartText("");
                     // Assurez-vous que la liste n'est pas vide avant d'accéder au premier élément
                     if (ParametresSmartTxts.Count > IndexSmartTxt)
@@ -463,14 +461,8 @@ namespace iFixInvalidity
 
                     // TSH.Parameters.SetSmartTextParameterCreation(OperationId, SmartTxt);
 
-                    TopSolidHost.Application.EndModification(true, true);
-                }
-                catch
-                {
-                    // End modification (failure).
-                    TopSolidHost.Application.EndModification(false, false);
-                }
-
+                   
+          
 
 
 
@@ -538,7 +530,7 @@ namespace iFixInvalidity
             string commentTxt = TSH.Parameters.GetTextValue(commentId);
 
 
-            MessageBox.Show(commentTxt);
+            //MessageBox.Show(commentTxt);
 
         }
 
@@ -552,7 +544,6 @@ namespace iFixInvalidity
         {
             try
             {
-                List<ElementId> ElementsIds = TSH.Operations.GetOperations(documentCourantId);
 
                 // Initialisation des valeurs de retour
                 indice3D = ElementId.Empty;
@@ -560,67 +551,15 @@ namespace iFixInvalidity
                 commentaireOriginal = ElementId.Empty;
                 designationOriginal = ElementId.Empty;
 
-                // Vérifie si la liste des identifiants d'éléments n'est pas null et n'est pas vide
+                //J'obtiens toute les operations du document courant
+                List<ElementId> ElementsIds = TSH.Operations.GetOperations(documentCourantId);
+
+                // Vérifie si la liste des operations  n'est pas null et n'est pas vide
                 if (ElementsIds != null && ElementsIds.Any())
                 {
-                    // Parcours de chaque identifiant d'élément dans la liste
-                    foreach (ElementId elementId in ElementsIds)
-                    {
+                    ProcessElements (in ElementsIds, out indice3D, out nomOriginal, out commentaireOriginal, out designationOriginal);
+       
 
-
-                        // Vérifie si l'élément est inclus dans un certain ensemble
-                        bool isInclusion = TSHD.Assemblies.IsInclusion(elementId);
-
-                        // Si l'élément est inclus
-                        if (isInclusion)
-                        {
-                            // Récupère l'enfant de l'inclusion
-                            ElementId insertedElementId = TSHD.Assemblies.GetInclusionChildOccurrence(elementId);
-
-                            bool isaMchineTool = false;
-                            //isaMchineTool =  TopSolidCamHost.Machines.IsMachineTool(insertedElementId);
-
-                            if (isaMchineTool == false)
-                            {
-                                // Récupère l'instance du document d'origine
-                                DocumentId instanceDocument = TSHD.Assemblies.GetOccurrenceDefinition(insertedElementId);
-
-                                // Si l'instance du document n'est pas null
-                                if (instanceDocument != null)
-                                {
-                                    // Récupère les paramètres de nom, de commentaire et de description de l'élément d'origine
-                                    nomOriginal = TSH.Parameters.GetNameParameter(instanceDocument);
-                                    commentaireOriginal = TSH.Parameters.GetCommentParameter(instanceDocument);
-                                    designationOriginal = TSH.Parameters.GetDescriptionParameter(instanceDocument);
-
-                                    List<ElementId> parametresIds = TSH.Parameters.GetParameters(instanceDocument);
-
-                                    if (parametresIds != null && parametresIds.Any())
-                                    {
-                                        foreach (ElementId parametresId in parametresIds)
-                                        {
-                                            string parametresIdNameTxt = TSH.Elements.GetName(parametresId);
-
-                                            //MessageBox.Show(parametresIdNameTxt);
-
-                                            if (parametresIdNameTxt == "Indice 3D")
-                                            {
-                                                indice3D = parametresId;
-                                            }
-
-
-                                        }
-                                    }
-                                }
-
-
-                            }
-
-                        }
-
-
-
-                    }
                 }
             }
             catch (Exception ex)
@@ -636,9 +575,86 @@ namespace iFixInvalidity
             }
         }
 
+        private void ProcessElements(in List<ElementId> elementsIds, out ElementId indice3D, out ElementId nomOriginal, out ElementId commentaireOriginal, out ElementId designationOriginal)
+        {
+            indice3D = ElementId.Empty;
+            nomOriginal = ElementId.Empty;
+            commentaireOriginal = ElementId.Empty;
+            designationOriginal = ElementId.Empty;
+
+            // Parcours de chaque identifiant d'élément dans la liste d'operations
+            foreach (ElementId elementId in elementsIds)
+            {
+                // Vérifie si l'élément est inclus dans un certain ensemble
+                // Si l'élément est inclus
+                if (TSHD.Assemblies.IsInclusion(elementId))
+                {
+                    //Recuperation du document inclu
+                    InstanceDocumentInclusion(in elementId, out DocumentId instanceDocument, out string DocumentExt);
+
+                    
+                    if (DocumentExt != ".TopMac")
+                    {
+                        // Récupère les paramètres de nom, de commentaire et de description de l'élément d'origine
+                        nomOriginal = TSH.Parameters.GetNameParameter(instanceDocument);
+                        commentaireOriginal = TSH.Parameters.GetCommentParameter(instanceDocument);
+                        designationOriginal = TSH.Parameters.GetDescriptionParameter(instanceDocument);
+
+                        List<ElementId> parametresIds = TSH.Parameters.GetParameters(instanceDocument);
+
+                        if (parametresIds != null && parametresIds.Any())
+                        {
+                            foreach (ElementId parametresId in parametresIds)
+                            {
+                                string parametresIdNameTxt = TSH.Elements.GetName(parametresId);
+
+                                //MessageBox.Show(parametresIdNameTxt);
+
+                                if (parametresIdNameTxt == "Indice 3D")
+                                {
+                                    indice3D = parametresId;
+                                }
 
 
+                            }
+                        }
+                    }
+                }
 
+            }
+        }
+
+        //Récupere l'instance du document dans une inclusion
+        private void InstanceDocumentInclusion(in ElementId elementId, out DocumentId instanceDocument, out string DocumentExt)
+        {
+            try
+            {
+                // Affiche le nom convivial de l'élément
+                //MessageBox.Show(TSH.Elements.GetFriendlyName(elementId));
+
+                // Récupère l'enfant de l'inclusion
+                ElementId insertedElementId = TSHD.Assemblies.GetInclusionChildOccurrence(elementId);
+
+                // Récupère l'instance du document d'origine
+                instanceDocument = TSHD.Assemblies.GetOccurrenceDefinition(insertedElementId);
+
+                // Affiche le nom du document
+                //MessageBox.Show(TSH.Documents.GetName(instanceDocument));
+
+                // Récupération du PdmObjectId associé
+                PdmObjectId pdmObjectId = TopSolidHost.Documents.GetPdmObject(instanceDocument);
+
+                // Récupération du type du document inséré
+                TSH.Pdm.GetType(pdmObjectId, out DocumentExt);
+            }
+            catch (Exception ex)
+            {
+                // Gestion des exceptions
+                MessageBox.Show($"Une erreur s'est produite : {ex.Message}");
+                instanceDocument = default; // Assurez-vous de définir une valeur par défaut en cas d'erreur
+                DocumentExt = string.Empty; // Assurez-vous de définir une valeur par défaut en cas d'erreur
+            }
+        }
 
 
 
@@ -682,14 +698,14 @@ namespace iFixInvalidity
             // Appel de la méthode
             GetOriginalParameters(documentCourantId, out indice3D, out nomOriginal, out commentaireOriginal, out designationOriginal);
 
-            string parametreNomOriginalTxt = TSH.Elements.GetFriendlyName(nomOriginal);
-            string parametreComOriginalTxt = TSH.Elements.GetFriendlyName(commentaireOriginal);
-            string parametreDesignationOriginalTxt = TSH.Elements.GetFriendlyName(designationOriginal);
-            string parametreIndiceOriginalTxt = TSH.Elements.GetName(indice3D);
+            //string parametreNomOriginalTxt = TSH.Elements.GetFriendlyName(nomOriginal);
+            //string parametreComOriginalTxt = TSH.Elements.GetFriendlyName(commentaireOriginal);
+            //string parametreDesignationOriginalTxt = TSH.Elements.GetFriendlyName(designationOriginal);
+            //string parametreIndiceOriginalTxt = TSH.Elements.GetName(indice3D);
 
-            string messageOriginal = string.Join("\n", parametreIndiceOriginalTxt, "\n", parametreNomOriginalTxt, "\n", parametreComOriginalTxt, "\n", parametreDesignationOriginalTxt);
+            //string messageOriginal = string.Join("\n", parametreIndiceOriginalTxt, "\n", parametreNomOriginalTxt, "\n", parametreComOriginalTxt, "\n", parametreDesignationOriginalTxt);
 
-            MessageBox.Show(messageOriginal, "Noms des éléments publiés", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            //MessageBox.Show(messageOriginal, "Noms des éléments publiés", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             //----------------------------------------------------------------------------------------------------------------------------------------------------------------
             //----------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -703,26 +719,21 @@ namespace iFixInvalidity
             List<ElementId> ElementsPubliedIds = PublishedElements(PublishFolderId);
 
             //Recuperation des noms des elements publié
-            List<string> namesPublishedElementsTxts = NamesPublishedElements(ElementsPubliedIds);
+           // List<string> namesPublishedElementsTxts = NamesPublishedElements(ElementsPubliedIds);
 
             // Convertir la liste en une chaîne avec chaque élément sur une nouvelle ligne
-            string message = string.Join("\n", namesPublishedElementsTxts); // Afficher la chaîne dans un MessageBox
-            MessageBox.Show(message, "Noms des éléments publiés", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            //string message = string.Join("\n", namesPublishedElementsTxts); // Afficher la chaîne dans un MessageBox
+            //MessageBox.Show(message, "Noms des éléments publiés", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             //Déclaration des noms des parametres texte a rechercher dans les publications
             string Commentaire = "Commentaire"; //Parametre commentaire 
             string Designation = "Designation";
             string Indice_3D = "Indice 3D";
 
-            //Recherche du parametre publié par son nom pour recuperer l'element ID
-            ElementId CommentaireId = PublicationsId(PublishFolderId, Commentaire);
-            ElementId DesignationId = PublicationsId(PublishFolderId, Designation);
-            ElementId Indice_3DId = PublicationsId(PublishFolderId, Indice_3D);
-
             //declaration du smart texte avec l'element id du parametre publié
-            SmartText SmartTxtCommentaireId = new SmartText(CommentaireId);
-            SmartText SmartTxtDesignationId = new SmartText(DesignationId);
-            SmartText SmartTxtIndice_3DId = new SmartText(Indice_3DId);
+            SmartText SmartTxtCommentaireId = new SmartText(commentaireOriginal);
+            SmartText SmartTxtDesignationId = new SmartText(designationOriginal);
+            SmartText SmartTxtIndice_3DId = new SmartText(indice3D);
 
             //déclaration d'une liste des smart texte
             List<SmartText> SmartTxtList = new List<SmartText>();
@@ -739,33 +750,41 @@ namespace iFixInvalidity
             //Liste des parametre contenu dans le dossier parametre
             List<ElementId> ParametresdIds = ParametresElements(ParametresFolderId);
 
+            if (!TopSolidHost.Application.StartModification("My Action", false)) return;
+            try
+            {
+
+                //verifie si le parametre est invalide
+                ElementId OperationId = ParamInvalide(documentCourantId);
+
+                //Répare le parametre commentaire
+                Fixit(OperationId, SmartTxtList, number0);
+                TSH.Documents.Update(documentCourantId,true);
+
+                //verifie si le parametre est invalide
+                OperationId = ParamInvalide(documentCourantId);
+
+                //Répare le parametre commentaire
+                Fixit(OperationId, SmartTxtList, number1);
+                TSH.Documents.Update(documentCourantId, true);
+
+                //verifie si le parametre est invalide
+                OperationId = ParamInvalide(documentCourantId);
+
+                Fixit(OperationId, SmartTxtList, number2);
+               // TSH.Documents.Update(documentCourantId, true);
+
+                TopSolidHost.Application.EndModification(true, true);
+
+            }
+            catch
+            {
+                // End modification (failure).
+                TopSolidHost.Application.EndModification(false, false);
+            }
 
 
-
-
-            //verifie si le parametre est invalide
-            ElementId OperationId = ParamInvalide(documentCourantId);
-
-            //affiche les noms des entités de l'arbre des operations
-            NomElementOperation(documentCourantId);
-
-            //Répare le parametre commentaire
-            Fixit(OperationId, SmartTxtList, number0);
-
-            //verifie si le parametre est invalide
-            OperationId = ParamInvalide(documentCourantId);
-
-            //Répare le parametre commentaire
-            Fixit(OperationId, SmartTxtList, number1);
-
-            //verifie si le parametre est invalide
-            OperationId = ParamInvalide(documentCourantId);
-            Fixit(OperationId, SmartTxtList, number2);
-
-
-
-
-
+            TSH.Disconnect();
             Environment.Exit(0);
 
 
@@ -788,6 +807,67 @@ namespace iFixInvalidity
         {
             Environment.Exit(0);
         }
+
+
+        //Bouton build ---------------------------------------------------------------------------------------------------------
+        private void button2_Click(object sender, EventArgs e)
+        {
+            DocumentId documentCourantId = new DocumentId();
+
+            if (!TopSolidHost.Application.StartModification("My Action", false)) return;
+            try
+            {
+                documentCourantId = DocumentCourant();
+                if (documentCourantId != DocumentId.Empty)
+                {
+                    string CommentaireTxt = "Commentaire";
+                    string DesignationTxt = "Designation";
+                    string Indice_3DTxt = "Indice 3D";
+
+
+                    ElementId Indice_3DExiste = TSH.Elements.SearchByName(documentCourantId, Indice_3DTxt);
+                    if (Indice_3DExiste == ElementId.Empty)
+                    {
+                        ElementId Indice_3DParam = TSH.Parameters.CreateTextParameter(documentCourantId, "");
+                        TSH.Elements.SetName(Indice_3DParam, Indice_3DTxt);
+                    }
+
+                    ElementId DesignationExiste = TSH.Elements.SearchByName(documentCourantId, DesignationTxt);
+                    if (DesignationExiste == ElementId.Empty)
+                    {
+                        ElementId DesignationParam = TSH.Parameters.CreateTextParameter(documentCourantId, "");
+                        TSH.Elements.SetName(DesignationParam, DesignationTxt);
+                    }
+
+                    ElementId CommentaireExiste = TSH.Elements.SearchByName(documentCourantId, CommentaireTxt);
+                    if (CommentaireExiste == ElementId.Empty)
+                    {
+                        ElementId CommentaireParam = TSH.Parameters.CreateTextParameter(documentCourantId, "");
+                        TSH.Elements.SetName(CommentaireParam, CommentaireTxt);
+                        
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Pas de document courant");
+
+                }
+            }
+            catch
+            {
+                // End modification (failure).
+                TopSolidHost.Application.EndModification(false, false);
+                TSH.Disconnect();
+                return;
+            }
+            finally
+            {
+                // End modification (success).
+                TopSolidHost.Application.EndModification(true, true);
+                TSH.Disconnect();
+            }
+        }
+
     }
 
     internal class Elementid
