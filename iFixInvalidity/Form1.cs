@@ -15,6 +15,7 @@ using TSH = TopSolid.Kernel.Automating.TopSolidHost;
 using TSHD = TopSolid.Cad.Design.Automating.TopSolidDesignHost;
 using System.IO;
 using System.Security;
+using System.Security.Cryptography;
 
 
 namespace iFixInvalidity
@@ -141,531 +142,226 @@ namespace iFixInvalidity
 
 
 
+        //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        //Fonction recurcive pour remonter au document piece original-------------------------------------------------------------------------------------------------------------------
+        //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-        //récupere element id du dossier publication
-        private ElementId PublishFolder(DocumentId documentCourantId)
+        private DocumentId RecupDocuMaster(DocumentId documentCourantId)
         {
-
-            if (documentCourantId != null)
+            if (documentCourantId != null && documentCourantId != DocumentId.Empty)
             {
-
                 try
                 {
-                    ElementId PublishFolderId = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Kernel.DB.Documents.ElementName.Publishings");
-                    return PublishFolderId;
+                    //Liste les operations du document
+                    List<ElementId> operationsList = OperationsList(documentCourantId);
+                    if (operationsList.Count != 0)
+                    {
+                        //Pour chaque elements de la liste
+                        foreach (ElementId operation in operationsList)
+                        {
+                            //Si c'est une inclusion
+                            if (TSHD.Assemblies.IsInclusion(operation))
+                            {
+                                //Recuperation de l'element de l'inclusion
+                                ElementId insertedElementId = TSHD.Assemblies.GetInclusionChildOccurrence(operation);
+                                //Recuperation de l'instance du document associé
+                                DocumentId instanceDocument = TSHD.Assemblies.GetOccurrenceDefinition(insertedElementId);
 
+                                // Récupération du PdmObjectId associé
+                                PdmObjectId pdmObjectId = TSH.Documents.GetPdmObject(instanceDocument);
+
+                                // Récupération de l'extension du document
+                                TSH.Pdm.GetType(pdmObjectId, out String DocumentExt);
+                                //Si c'est un fichier piece, renvoyer le document ID
+                                if (DocumentExt == ".TopPrt")
+                                {
+                                    //DocumentId documentDansPrepa = RecupDocuMaster(instanceDocument);
+                                    if (instanceDocument != DocumentId.Empty)
+                                    {
+                                        return instanceDocument;
+                                    }
+                                }
+                                //Si c'est un document de prepa, relancer la fonction
+                                if (DocumentExt == ".TopNewPrtSet")
+                                {
+                                    DocumentId result = RecupDocuMaster(instanceDocument);
+                                    if (result != DocumentId.Empty)
+                                    {
+                                        return result;
+                                    }
+                                }
+                                
+                            }
+                        }
+                    }
+                    return DocumentId.Empty;
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Erreur lors de la récupération dossiers publication : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return ElementId.Empty;
-
+                    MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    // Retourner DocumentId.Empty en cas d'exception
+                    return DocumentId.Empty;
                 }
-
             }
-            else
-            {
-                MessageBox.Show("Le dossier Publications n'existe pas ou est vide");
-                return new ElementId();
-            }
-
+            // Retourner DocumentId.Empty si documentCourantId est null ou empty
+            return DocumentId.Empty;
         }
 
-
-        //recupere le contenu du dossier publication
-        private ElementId PublicationsId(ElementId PublishFolderId, String NomParametreTxt)
+        // Récupère la liste des opérations d'un document
+        private List<ElementId> OperationsList(DocumentId documentCourantId)
         {
-
-            if (PublishFolderId != null)
+            if (documentCourantId != null && documentCourantId != DocumentId.Empty)
             {
                 try
                 {
-                    List<ElementId> ElementsPubliedIds = TSH.Elements.GetConstituents(PublishFolderId);
+                    List<ElementId> operationsList = TSH.Operations.GetOperations(documentCourantId);
+                    return operationsList;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Erreur : lors de la récupération de la liste des opérations " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            return new List<ElementId>();
+        }
 
-                    if (ElementsPubliedIds != null)
+        //Déclaration des noms des parametres texte a rechercher dans les publications
+        string Commentaire = "Commentaire"; //Parametre commentaire 
+        string Designation = "Designation";
+        string Indice_3D = "Indice 3D";
+
+        private void ParametreMaster(in DocumentId docMaster, out ElementId indice3D, out ElementId commentaireOriginal, out ElementId designationOriginal)
+        {
+            // Initialisation des paramètres out avec des valeurs par défaut
+            indice3D = new ElementId();
+            commentaireOriginal = new ElementId();
+            designationOriginal = new ElementId();
+
+            //Recherche des parametre publié dans le document maitre
+            List<ElementId>ParameterPubliéList = TSH.Entities.GetPublishings(docMaster);
+
+            //Si la liste de parametre publié n'est pas vide
+            if (ParameterPubliéList.Count > 0)
+            {
+                try
+                {
+                    //Pour chaque parametre publié
+                    foreach (ElementId Parameter in ParameterPubliéList)
                     {
+                        //Récuperation du nom de chaque parametre publié pour comparaison
+                        string ParameterName = TSH.Elements.GetFriendlyName(Parameter);
+                        MessageBox.Show(ParameterName);
 
-
-                        foreach (ElementId ElementsPubliedId in ElementsPubliedIds)
+                        //Si le nom du parametre est egale au nom attendu renvoyé l'element ID
+                        if (ParameterName == Indice_3D)
                         {
-                            string NameElementsPubliedId = TSH.Elements.GetName(ElementsPubliedId);
+                            indice3D = Parameter;
+                        }
+                        if (ParameterName == Commentaire)
+                        {
+                            commentaireOriginal = Parameter;
+                        }
+                        if (ParameterName == Designation)
+                        {
+                            designationOriginal = Parameter;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Erreur : lors de la recuperation des parametre maitre" + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            else 
+            {
+                MessageBox.Show("Erreur : La liste des parametre publié est vide dans le document maitre");
+                indice3D = new ElementId();
+                commentaireOriginal = new ElementId();
+                designationOriginal = new ElementId();
+            }
+        }
 
-                            if (NameElementsPubliedId == NomParametreTxt)
+        //Recuperation des parametres a modifier.
+        private void SetSmartTxtParameter(DocumentId documentCourantId, SmartText[] SmartTxtTable)
+        {
+            if (!TopSolidHost.Application.StartModification("My Action", false)) return;
+
+            try
+            {
+                TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
+
+                //Recherche des parametre publié dans le document courant
+                List<ElementId> ParameterPubliéList = TSH.Parameters.GetParameters(documentCourantId);
+
+                //Si la liste des parametres publié n'est pas vide
+                if (ParameterPubliéList.Count > 0)
+                {
+                    foreach(ElementId ParameterPublié in ParameterPubliéList)
+                    {
+                        string Parametertype = TSH.Elements.GetTypeFullName(ParameterPublié);
+                        //MessageBox.Show(Parametertype);
+
+                        if (Parametertype == "TopSolid.Kernel.DB.Parameters.TextParameterEntity")
+                        {
+                            string ParameterPubliéName = TSH.Elements.GetFriendlyName(ParameterPublié);
+
+                            if (ParameterPubliéName == Commentaire)
                             {
-
-                                return ElementsPubliedId;
+                                ElementId ParameterPubliéOp = TSH.Elements.GetParent(ParameterPublié);
+                                TSH.Parameters.SetSmartTextParameterCreation(ParameterPubliéOp, SmartTxtTable[1]);
+                            }
+                            if (ParameterPubliéName == Designation)
+                            {
+                                ElementId ParameterPubliéOp = TSH.Elements.GetParent(ParameterPublié);
+                                TSH.Parameters.SetSmartTextParameterCreation(ParameterPubliéOp, SmartTxtTable[2]);
+                            }
+                            if (ParameterPubliéName == Indice_3D)
+                            {
+                                ElementId ParameterPubliéOp = TSH.Elements.GetParent(ParameterPublié);
+                                TSH.Parameters.SetSmartTextParameterCreation(ParameterPubliéOp, SmartTxtTable[3]);
                             }
 
                         }
-
-                        return ElementId.Empty;
                     }
-                    else
-                    {
-                        return ElementId.Empty;
-
-                    }
-
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Erreur lors de la récupération du contenu du dossier publication : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                    return ElementId.Empty;
-                }
-            }
-            else
-            {
-                MessageBox.Show("Le dossier Publications n'existe pas ou est vide");
-                return ElementId.Empty;
-            }
-
-        }
-
-
-        //creer une liste du contenu du dossier publication
-        private List<ElementId> PublishedElements(ElementId PublishFolderId)
-        {
-            if (PublishFolderId != null)
-            {
-                try
-                {
-                    List<ElementId> ElementsPubliedIds = TSH.Elements.GetConstituents(PublishFolderId);
-
-                    return ElementsPubliedIds;
-
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Erreur lors de la récupération du contenu du dossier publication : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                    return new List<ElementId>();
-                }
-            }
-            else
-            {
-                MessageBox.Show("Le dossier Publications n'existe pas ou est vide");
-                return new List<ElementId>();
-            }
-
-        }
-
-
-        //récupere le nom des parametres du dossier publication
-        private List<string> NamesPublishedElements(List<ElementId> ElementsPubliedIds)
-        {
-
-            List<string> namesPublishedElementsTxts = new List<string>();
-
-            try
-            {
-                foreach (ElementId ElementsPubliedId in ElementsPubliedIds)
-                {
-
-                    string namesPublishedElementsTxt = TSH.Elements.GetName(ElementsPubliedId);
-                    namesPublishedElementsTxts.Add(namesPublishedElementsTxt);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Erreur lors de la récupération des noms des éléments publiés : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-
-            return namesPublishedElementsTxts;
-
-
-        }
-
-        //récupere dossier parametre
-        private ElementId ParametresFolder(DocumentId documentCourantId)
-        {
-
-            if (documentCourantId != null)
-            {
-
-                try
-                {
-                    ElementId ParametresFolderId = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Kernel.DB.Documents.ElementName.SystemParameters");
-                    return ParametresFolderId;
-
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Erreur lors de la récupération dossiers parametre : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return ElementId.Empty;
-
-                }
-
-            }
-            else
-            {
-                MessageBox.Show("Le dossier Parametre n'existe pas ou est vide");
-                return new ElementId();
-            }
-
-        }
-
-
-        //récupere une liste du contenu du dossier parametre
-        private List<ElementId> ParametresElements(ElementId ParametreFolderId)
-        {
-            if (ParametreFolderId != null)
-            {
-                try
-                {
-                    List<ElementId> ParametresdIds = TSH.Elements.GetConstituents(ParametreFolderId);
-
-                    return ParametresdIds;
-
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Erreur lors de la récupération du contenu du dossier parametre : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                    return new List<ElementId>();
-                }
-            }
-            else
-            {
-                MessageBox.Show("Le dossier parametre n'existe pas ou est vide");
-                return new List<ElementId>();
-            }
-
-        }
-
-
-
-
-
-        //verifie si les parametre du dossier parametre sont invalide
-
-        private ElementId ParametreIsInValide(List<ElementId> ParametresdIds)
-        {
-            bool IsInvalide = false;
-            if (ParametresdIds != null)
-            {
-                foreach (ElementId ParametresdId in ParametresdIds)
-                {
-
-                    IsInvalide = TSH.Elements.IsInvalid(ParametresdId);
-
-                    if (IsInvalide)
-                    {
-                        return ParametresdId;
-                    }
-                }
-                return ElementId.Empty;
-
-            }
-            return ElementId.Empty;
-        }
-
-
-        //verifie si les operations de l'arbre des operation sont valide
-        public ElementId ParamInvalide(DocumentId documentCourantId)
-        {
-
-            List<ElementId> OperationsId = TSH.Operations.GetOperations(documentCourantId);
-
-
-
-            foreach (ElementId OperationId in OperationsId)
-            {
-                string namesOperationsTxt = TSH.Elements.GetName(OperationId);
-
-                //MessageBox.Show(namesOperationsTxt);
-
-                bool IsInvalide = TSH.Elements.IsInvalid(OperationId);
-                if (IsInvalide)
-                {
-
-                    return OperationId;
-                }
-
-            }
-            return ElementId.Empty;
-
-        }
-
-        //recupere le nom des enfant d'une operation et l'affiche dans une txtbox
-
-
-        private void NomElementOperation(DocumentId documentCourantId)
-        {
-            try
-            {
-
-                List<ElementId> ElementsId = TSH.Operations.GetOperations(documentCourantId);
-
-                if (ElementsId != null)
-                {
-
-
-                    foreach (ElementId ElementId in ElementsId)
-                    {
-                        List<ElementId> ElementIdNames = TSH.Operations.GetChildren(ElementId);
-
-                        foreach (ElementId ElementIdName in ElementIdNames)
-                        {
-                            string ElementIdNamTxt = TSH.Elements.GetName(ElementIdName);
-
-                            //MessageBox.Show(ElementIdNamTxt);
-
-
-
-                        }
-
-
-                    }
-
                 }
                 else
                 {
-                    MessageBox.Show("la liste est vide");
+
+                MessageBox.Show("Erreur : La liste des parametres courant est vide");
+                ElementId indice3DCourant = new ElementId();
+                ElementId commentaireCourant = new ElementId();
+                ElementId designationCourant = new ElementId();
                 }
+
+                TopSolidHost.Application.EndModification(true, true);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Erreur lors de la récupération nom de l'entité de l'operation : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-
+                MessageBox.Show("Erreur : lors de la recuperation des parametres courant" + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                TopSolidHost.Application.EndModification(false, false);
             }
 
         }
 
-
-        //reconecte le parametre suivant l'indexe
-        private void Fixit(ElementId OperationId, List<SmartText> ParametresSmartTxts, int IndexSmartTxt)
-        {
-
-
-            if (OperationId != null)
+        private SmartText CreateSmartTxt(ElementId smartTxt)
             {
-
-               
-
-                    SmartText SmartTxt = new SmartText("");
-                    // Assurez-vous que la liste n'est pas vide avant d'accéder au premier élément
-                    if (ParametresSmartTxts.Count > IndexSmartTxt)
-                    {
-                        SmartTxt = ParametresSmartTxts[IndexSmartTxt];
-                        TSH.Parameters.SetSmartTextParameterCreation(OperationId, SmartTxt);
-
-
-                    }
-                    else
-                    {
-                        MessageBox.Show("La liste est vide", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-
-
-                    // TSH.Parameters.SetSmartTextParameterCreation(OperationId, SmartTxt);
-
-                   
-          
-
-
-
+            SmartText SmartTxtId = new SmartText(smartTxt);
+            return SmartTxtId;
             }
 
-        }
-
-        //private ElementId ParametreId(DocumentId ) {
-
-        //Récuperation des parametres de derivation---------------------------------------------------------------------------------------------------------------------------------
-
-        private void ObtenirDerivation(DocumentId documentCourantId)
-        {
-
-            bool derivé = TopSolidDesignHost.Tools.IsDerived(documentCourantId);
-
-
-
-            if (derivé)
-            {
-
-                TopSolidDesignHost.Tools.GetDerivationInheritances(documentCourantId,
-                                                out bool outName,
-                                                out bool outDescription,
-                                                out bool outCode,
-                                                out bool outPartNumber,
-                                                out bool outComplementaryPartNumber,
-                                                out bool outManufacturer,
-                                                out bool outManufacturerPartNumber,
-                                                out bool outComment,
-                                                out List<ElementId> outOtherSystemParameters,
-                                                out bool outNonSystemParameters,
-                                                out bool outPoints,
-                                                out bool outAxes,
-                                                out bool outPlanes,
-                                                out bool outFrames,
-                                                out bool outSketches,
-                                                out bool outShapes,
-                                                out bool outPublishings,
-                                                out bool outFunctions,
-                                                out bool outSymmetries,
-                                                out bool outUnsectionabilities,
-                                                out bool outRepresentations,
-                                                out bool outSets,
-                                                out bool outCameras
-                                            );
-                string message = "Variables et leurs valeurs :\n" + $"outName: {outName}\n" + $"outDescription: {outDescription}\n" + $"outCode: {outCode}\n" + $"outPartNumber: {outPartNumber}\n" + $"outComplementaryPartNumber: {outComplementaryPartNumber}\n" + $"outManufacturer: {outManufacturer}\n" + $"outManufacturerPartNumber: {outManufacturerPartNumber}\n" + $"outComment: {outComment}\n" + $"outOtherSystemParameters: {string.Join(", ", outOtherSystemParameters ?? new List<ElementId>())}\n" + $"outNonSystemParameters: {outNonSystemParameters}\n" + $"outPoints: {outPoints}\n" + $"outAxes: {outAxes}\n" + $"outPlanes: {outPlanes}\n" + $"outFrames: {outFrames}\n" + $"outSketches: {outSketches}\n" + $"outShapes: {outShapes}\n" + $"outPublishings: {outPublishings}\n" + $"outFunctions: {outFunctions}\n" + $"outSymmetries: {outSymmetries}\n" + $"outUnsectionabilities: {outUnsectionabilities}\n" + $"outRepresentations: {outRepresentations}\n" + $"outSets: {outSets}\n" + $"outCameras: {outCameras}";
-                MessageBox.Show(message, "Valeurs des Variables", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-
-            }
-            else
-            {
-                MessageBox.Show("le document n'est pas adapté a la derivation");
-            }
-        }
-
-
-        private void GetCommentaire(DocumentId documentCourantId)
-        {
-
-            ElementId commentId = TSH.Parameters.GetCommentParameter(documentCourantId);
-
-
-            string commentTxt = TSH.Parameters.GetTextValue(commentId);
-
-
-            //MessageBox.Show(commentTxt);
-
-        }
-
-
-
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        //Fonction recuperation des valeur original avec une classe
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-        private void GetOriginalParameters(DocumentId documentCourantId, out ElementId indice3D, out ElementId nomOriginal, out ElementId commentaireOriginal, out ElementId designationOriginal)
-        {
-            try
-            {
-
-                // Initialisation des valeurs de retour
-                indice3D = ElementId.Empty;
-                nomOriginal = ElementId.Empty;
-                commentaireOriginal = ElementId.Empty;
-                designationOriginal = ElementId.Empty;
-
-                //J'obtiens toute les operations du document courant
-                List<ElementId> ElementsIds = TSH.Operations.GetOperations(documentCourantId);
-
-                // Vérifie si la liste des operations  n'est pas null et n'est pas vide
-                if (ElementsIds != null && ElementsIds.Any())
-                {
-                    ProcessElements (in ElementsIds, out indice3D, out nomOriginal, out commentaireOriginal, out designationOriginal);
-       
-
-                }
-            }
-            catch (Exception ex)
-            {
-                // Affiche un message d'erreur en cas d'exception
-                MessageBox.Show("Erreur : pour récupérer le paramètre de nom, commentaire et désignation de la pièce dans l'inclusion " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                // Initialisation des valeurs de retour en cas d'exception
-                indice3D = ElementId.Empty;
-                nomOriginal = ElementId.Empty;
-                commentaireOriginal = ElementId.Empty;
-                designationOriginal = ElementId.Empty;
-            }
-        }
-
-        private void ProcessElements(in List<ElementId> elementsIds, out ElementId indice3D, out ElementId nomOriginal, out ElementId commentaireOriginal, out ElementId designationOriginal)
-        {
-            indice3D = ElementId.Empty;
-            nomOriginal = ElementId.Empty;
-            commentaireOriginal = ElementId.Empty;
-            designationOriginal = ElementId.Empty;
-
-            // Parcours de chaque identifiant d'élément dans la liste d'operations
-            foreach (ElementId elementId in elementsIds)
-            {
-                // Vérifie si l'élément est inclus dans un certain ensemble
-                // Si l'élément est inclus
-                if (TSHD.Assemblies.IsInclusion(elementId))
-                {
-                    //Recuperation du document inclu
-                    InstanceDocumentInclusion(in elementId, out DocumentId instanceDocument, out string DocumentExt);
-
-                    
-                    if (DocumentExt != ".TopMac")
-                    {
-                        // Récupère les paramètres de nom, de commentaire et de description de l'élément d'origine
-                        nomOriginal = TSH.Parameters.GetNameParameter(instanceDocument);
-                        commentaireOriginal = TSH.Parameters.GetCommentParameter(instanceDocument);
-                        designationOriginal = TSH.Parameters.GetDescriptionParameter(instanceDocument);
-
-                        List<ElementId> parametresIds = TSH.Parameters.GetParameters(instanceDocument);
-
-                        if (parametresIds != null && parametresIds.Any())
-                        {
-                            foreach (ElementId parametresId in parametresIds)
-                            {
-                                string parametresIdNameTxt = TSH.Elements.GetName(parametresId);
-
-                                //MessageBox.Show(parametresIdNameTxt);
-
-                                if (parametresIdNameTxt == "Indice 3D")
-                                {
-                                    indice3D = parametresId;
-                                }
-
-
-                            }
-                        }
-                    }
-                }
-
-            }
-        }
-
-        //Récupere l'instance du document dans une inclusion
-        private void InstanceDocumentInclusion(in ElementId elementId, out DocumentId instanceDocument, out string DocumentExt)
-        {
-            try
-            {
-                // Affiche le nom convivial de l'élément
-                //MessageBox.Show(TSH.Elements.GetFriendlyName(elementId));
-
-                // Récupère l'enfant de l'inclusion
-                ElementId insertedElementId = TSHD.Assemblies.GetInclusionChildOccurrence(elementId);
-
-                // Récupère l'instance du document d'origine
-                instanceDocument = TSHD.Assemblies.GetOccurrenceDefinition(insertedElementId);
-
-                // Affiche le nom du document
-                //MessageBox.Show(TSH.Documents.GetName(instanceDocument));
-
-                // Récupération du PdmObjectId associé
-                PdmObjectId pdmObjectId = TopSolidHost.Documents.GetPdmObject(instanceDocument);
-
-                // Récupération du type du document inséré
-                TSH.Pdm.GetType(pdmObjectId, out DocumentExt);
-            }
-            catch (Exception ex)
-            {
-                // Gestion des exceptions
-                MessageBox.Show($"Une erreur s'est produite : {ex.Message}");
-                instanceDocument = default; // Assurez-vous de définir une valeur par défaut en cas d'erreur
-                DocumentExt = string.Empty; // Assurez-vous de définir une valeur par défaut en cas d'erreur
-            }
-        }
-
-
-
+        //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         // Gestionnaire de clic pour le bouton.-----------------------------------------------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+        //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
         private void button1_Click_1(object sender, EventArgs e)
         {
+            //Déclaration variable docu courant
             DocumentId documentCourantId = new DocumentId();
 
+            //Recupération docu courant
             try
             {
                 documentCourantId = DocumentCourant();
@@ -685,103 +381,44 @@ namespace iFixInvalidity
 
             }
 
+            //Fonction recup docu master
+            DocumentId docMaster = RecupDocuMaster(documentCourantId);
 
+            String docMasterName = TSH.Documents.GetName(docMaster);
+            MessageBox.Show("Document piece trouvé : " + docMasterName);
 
             //Recuperation des parametres de base originaux depuis l'operation d'inclusion
-
-            // Déclaration des variables pour recevoir les valeurs de retour
+            //Déclaration des variables pour recevoir les valeurs de retour
             ElementId indice3D;
             ElementId nomOriginal;
             ElementId commentaireOriginal;
             ElementId designationOriginal;
 
-            // Appel de la méthode
-            GetOriginalParameters(documentCourantId, out indice3D, out nomOriginal, out commentaireOriginal, out designationOriginal);
-
-            //string parametreNomOriginalTxt = TSH.Elements.GetFriendlyName(nomOriginal);
-            //string parametreComOriginalTxt = TSH.Elements.GetFriendlyName(commentaireOriginal);
-            //string parametreDesignationOriginalTxt = TSH.Elements.GetFriendlyName(designationOriginal);
-            //string parametreIndiceOriginalTxt = TSH.Elements.GetName(indice3D);
-
-            //string messageOriginal = string.Join("\n", parametreIndiceOriginalTxt, "\n", parametreNomOriginalTxt, "\n", parametreComOriginalTxt, "\n", parametreDesignationOriginalTxt);
-
-            //MessageBox.Show(messageOriginal, "Noms des éléments publiés", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-            //----------------------------------------------------------------------------------------------------------------------------------------------------------------
-            //----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
+            //Recuperation des parametres master
+            ParametreMaster(in docMaster, out indice3D, out commentaireOriginal, out designationOriginal);
 
-            //Recuperation du dossier des publication
-            ElementId PublishFolderId = PublishFolder(documentCourantId);
+            SmartText SmartTxtCommentaireId = CreateSmartTxt(commentaireOriginal);
+            SmartText SmartTxtDesignationId = CreateSmartTxt(designationOriginal);
+            SmartText SmartTxtIndice_3DId = CreateSmartTxt(indice3D);
 
-            //Recuperation liste des elements publié
-            List<ElementId> ElementsPubliedIds = PublishedElements(PublishFolderId);
+            // Déclarer et initialiser un tableau de SmartText
+            SmartText[] SmartTxtTable = new SmartText[4];
 
-            //Recuperation des noms des elements publié
-           // List<string> namesPublishedElementsTxts = NamesPublishedElements(ElementsPubliedIds);
+            //SmartTxtTable[0] = SmartTxtEmpty;
 
-            // Convertir la liste en une chaîne avec chaque élément sur une nouvelle ligne
-            //string message = string.Join("\n", namesPublishedElementsTxts); // Afficher la chaîne dans un MessageBox
-            //MessageBox.Show(message, "Noms des éléments publiés", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            SmartTxtTable[1] = SmartTxtCommentaireId; //Index 1
 
-            //Déclaration des noms des parametres texte a rechercher dans les publications
-            string Commentaire = "Commentaire"; //Parametre commentaire 
-            string Designation = "Designation";
-            string Indice_3D = "Indice 3D";
+            SmartTxtTable[2] = SmartTxtDesignationId;//Index 2
 
-            //declaration du smart texte avec l'element id du parametre publié
-            SmartText SmartTxtCommentaireId = new SmartText(commentaireOriginal);
-            SmartText SmartTxtDesignationId = new SmartText(designationOriginal);
-            SmartText SmartTxtIndice_3DId = new SmartText(indice3D);
+            SmartTxtTable[3] = SmartTxtIndice_3DId; //Index 3
 
-            //déclaration d'une liste des smart texte
-            List<SmartText> SmartTxtList = new List<SmartText>();
-            SmartTxtList.Add(SmartTxtCommentaireId); //Index 0
-            int number0 = 0;
-            SmartTxtList.Add(SmartTxtDesignationId);//Index 1
-            int number1 = 1;
-            SmartTxtList.Add(SmartTxtIndice_3DId); //Index 2
-            int number2 = 2;
+            SetSmartTxtParameter(documentCourantId, SmartTxtTable);
 
-            //Recuperation du dossier des parametres
-            ElementId ParametresFolderId = ParametresFolder(documentCourantId);
 
-            //Liste des parametre contenu dans le dossier parametre
-            List<ElementId> ParametresdIds = ParametresElements(ParametresFolderId);
 
-            if (!TopSolidHost.Application.StartModification("My Action", false)) return;
-            try
-            {
 
-                //verifie si le parametre est invalide
-                ElementId OperationId = ParamInvalide(documentCourantId);
-
-                //Répare le parametre commentaire
-                Fixit(OperationId, SmartTxtList, number0);
-                TSH.Documents.Update(documentCourantId,true);
-
-                //verifie si le parametre est invalide
-                OperationId = ParamInvalide(documentCourantId);
-
-                //Répare le parametre commentaire
-                Fixit(OperationId, SmartTxtList, number1);
-                TSH.Documents.Update(documentCourantId, true);
-
-                //verifie si le parametre est invalide
-                OperationId = ParamInvalide(documentCourantId);
-
-                Fixit(OperationId, SmartTxtList, number2);
-               // TSH.Documents.Update(documentCourantId, true);
-
-                TopSolidHost.Application.EndModification(true, true);
-
-            }
-            catch
-            {
-                // End modification (failure).
-                TopSolidHost.Application.EndModification(false, false);
-            }
 
 
             TSH.Disconnect();
@@ -844,7 +481,7 @@ namespace iFixInvalidity
                     {
                         ElementId CommentaireParam = TSH.Parameters.CreateTextParameter(documentCourantId, "");
                         TSH.Elements.SetName(CommentaireParam, CommentaireTxt);
-                        
+
                     }
                 }
                 else
