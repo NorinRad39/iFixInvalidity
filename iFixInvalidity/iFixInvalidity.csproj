@@ -32,6 +32,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>un logo de recyclage stylisé qui passe du rouge au vert, avec un engrenage au milieu, sans aucun lien avec lecole %282%29.ico</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -45,13 +48,13 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="TopSolid.Cad.Design.Automating">
-      <HintPath>..\..\..\..\..\..\..\Program Files\TOPSOLID\TopSolid 7.17\bin\TopSolid.Cad.Design.Automating.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\Program Files\TOPSOLID\TopSolid 7.18\bin\TopSolid.Cad.Design.Automating.dll</HintPath>
     </Reference>
     <Reference Include="TopSolid.Cad.Drafting.Automating">
-      <HintPath>..\..\..\..\..\..\..\Program Files\TOPSOLID\TopSolid 7.17\bin\TopSolid.Cad.Drafting.Automating.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\Program Files\TOPSOLID\TopSolid 7.18\bin\TopSolid.Cad.Drafting.Automating.dll</HintPath>
     </Reference>
     <Reference Include="TopSolid.Kernel.Automating">
-      <HintPath>..\..\..\..\..\..\..\Program Files\TOPSOLID\TopSolid 7.17\bin\TopSolid.Kernel.Automating.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\Program Files\TOPSOLID\TopSolid 7.18\bin\TopSolid.Kernel.Automating.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -96,6 +99,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="un logo de recyclage stylisé qui passe du rouge au vert, avec un engrenage au milieu, sans aucun lien avec lecole %282%29.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
