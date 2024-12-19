@@ -24,7 +24,6 @@ namespace iFixInvalidity
 
     public partial class Form1 : Form
     {
-        bool prepaTrouvé = false;
         public object TopSolidDesign { get; private set; }
 
         public Form1()
@@ -36,6 +35,7 @@ namespace iFixInvalidity
             DisplayMasterDocumentName();
         }
 
+        bool prepaTrouvé = false;
 
         private void ConnectToTopSolid()
         {
@@ -337,6 +337,29 @@ namespace iFixInvalidity
                             designationOriginal = Parameter;
                             LogMessage($"Paramètre '{Designation}' trouvé.", System.Drawing.Color.Green);
                         }
+                        if (prepaTrouvé)
+                        {
+                            try
+                            {
+                                foreach(ElementId ParameterPrepaDocument in ParameterPubliéListPrepaDocument)
+                                {
+
+                                    string ParameterPrepaDocumentName = TSH.Elements.GetFriendlyName(ParameterPrepaDocument);
+
+                                    if (ParameterPrepaDocumentName == OP)
+                                    {
+                                        OPOriginal = Parameter;
+                                        LogMessage($"Paramètre '{OP}' trouvé.", System.Drawing.Color.Green);
+                                        return; // Sortir de la méthode dès que OPOriginal est trouvé
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                LogMessage($"Erreur : lors de la récupération des paramètres OP : {ex.Message}", System.Drawing.Color.Red);
+                                MessageBox.Show("Erreur : lors de la récupération des paramètres OP " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -353,35 +376,7 @@ namespace iFixInvalidity
                 commentaireOriginal = new ElementId();
                 designationOriginal = new ElementId();
             }
-
-            if (prepaTrouvé)
-            { 
-                // Recherche des paramètres publiés dans le document de prépa
-                if (ParameterPubliéListPrepaDocument.Count > 0)
-                {
-                    try
-                    {
-                        foreach (ElementId ParameterOP in ParameterPubliéListPrepaDocument)
-                        {
-                            // Récupération du nom de chaque paramètre publié pour comparaison
-                            string ParameterNameOP = TSH.Elements.GetFriendlyName(ParameterOP);
-                            MessageBox.Show(ParameterNameOP);
-
-                            if (ParameterNameOP == OP)
-                            {
-                                OPOriginal = ParameterOP;
-                                LogMessage($"Paramètre '{OP}' trouvé.", System.Drawing.Color.Green);
-                                return; // Sortir de la méthode dès que OPOriginal est trouvé
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        LogMessage($"Erreur : lors de la récupération des paramètres OP : {ex.Message}", System.Drawing.Color.Red);
-                        MessageBox.Show("Erreur : lors de la récupération des paramètres OP " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-            }
+ 
         }
 
 
@@ -431,7 +426,7 @@ namespace iFixInvalidity
                                 try
                                 {
                                     TSH.Parameters.SetSmartTextParameterCreation(ParameterPubliéOp, SmartTxtTable[1]);
-                                    CommentaireUpdated = true;
+                                    CommentaireUpdated = true;// Marquer la méthode comme exécutée
                                     LogMessage($"Paramètre '{Commentaire}' mis à jour.", System.Drawing.Color.Green);
                                 }
                                 catch (Exception ex)
@@ -446,7 +441,7 @@ namespace iFixInvalidity
                                 try
                                 {
                                     TSH.Parameters.SetSmartTextParameterCreation(ParameterPubliéOp, SmartTxtTable[2]);
-                                    DesignationUpdated = true;
+                                    DesignationUpdated = true;// Marquer la méthode comme exécutée
                                     LogMessage($"Paramètre '{Designation}' mis à jour.", System.Drawing.Color.Green);
                                 }
                                 catch (Exception ex)
@@ -461,7 +456,7 @@ namespace iFixInvalidity
                                 try
                                 {
                                     TSH.Parameters.SetSmartTextParameterCreation(ParameterPubliéOp, SmartTxtTable[3]);
-                                    Indice_3DUpdated = true;
+                                    Indice_3DUpdated = true; // Marquer la méthode comme exécutée
                                     LogMessage($"Paramètre '{Indice_3D}' mis à jour.", System.Drawing.Color.Green);
                                 }
                                 catch (Exception ex)
@@ -470,33 +465,25 @@ namespace iFixInvalidity
                                     throw; // Relancer l'exception pour s'assurer que le bloc finally est exécuté
                                 }
                             }
-                        }
 
-                        if (DocumentExt == ".TopMillTurn")
-                        {
-                            List<ElementId> PublishingListe = TSH.Entities.GetPublishings(documentCourantId);
-                            if (PublishingListe != null)
+                            if (DocumentExt == ".TopMillTurn")
                             {
-                                foreach (ElementId publishingElement in PublishingListe)
-                                {
-                                    string OPIdExiste = TSH.Elements.GetName(publishingElement);
-                                    //MessageBox.Show(OPIdExiste);
 
+                                if (ParameterPubliéName == OP)
+                                {
+                                    ElementId ParameterPubliéOp = TSH.Elements.GetParent(ParameterPublié);
                                     try
                                     {
-                                        if (OPIdExiste == "OP" && !OPDefinitionSet)
-                                        {
-                                            TSH.Parameters.SetTextPublishingDefinition(publishingElement, SmartTxtTable[0]);
-                                            OPDefinitionSet = true; // Marquer la méthode comme exécutée
-                                            OPUpdated = true;
-                                            LogMessage($"Paramètre '{OP}' mis à jour.", System.Drawing.Color.Green);
-                                        }
+                                        TSH.Parameters.SetSmartTextParameterCreation(ParameterPubliéOp, SmartTxtTable[0]);
+                                        OPDefinitionSet = true; // Marquer la méthode comme exécutée
+                                        LogMessage($"Paramètre '{OP}' mis à jour.", System.Drawing.Color.Green);
                                     }
                                     catch (Exception ex)
                                     {
                                         MessageBox.Show("Erreur : lors de l'édition du paramètre OP " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                         throw; // Relancer l'exception pour s'assurer que le bloc finally est exécuté
                                     }
+
                                 }
                             }
                         }
@@ -677,10 +664,25 @@ namespace iFixInvalidity
         }
 
 
+        //Fonction qui recupere extention du document
+        private string Extention (DocumentId documentCourantId)
+        {
+            // Récupération du PdmObjectId associé
+            PdmObjectId pdmObjectId = TSH.Documents.GetPdmObject(documentCourantId);
+
+            // Récupération de l'extension du document
+            TSH.Pdm.GetType(pdmObjectId, out string DocumentExt);
+            return DocumentExt;
+        }
+
+
+
         //Bouton build ---------------------------------------------------------------------------------------------------------
         private void button2_Click(object sender, EventArgs e)
         {
             DocumentId documentCourantId = DocumentCourant();
+
+            
 
             // Vérification de documentCourantId
             if (documentCourantId == null || documentCourantId == DocumentId.Empty)
@@ -711,9 +713,11 @@ namespace iFixInvalidity
                 bool CommentaireCreated = false;
                 bool OPIdCreated = false;
 
+                //cherche un element appelé Indice 3D
                 ElementId Indice_3DExiste = TSH.Elements.SearchByName(documentCourantId, Indice_3DTxt);
                 if (Indice_3DExiste == ElementId.Empty)
                 {
+                    //Creation parametre smart texte puis renommange en Indice 3D
                     ElementId Indice_3DParam = TSH.Parameters.CreateSmartTextParameter(documentCourantId, new SmartText(""));
                     TSH.Elements.SetName(Indice_3DParam, Indice_3DTxt);
                     Indice_3DCreated = true;
@@ -724,25 +728,28 @@ namespace iFixInvalidity
                     LogMessage($"Paramètre '{Indice_3DTxt}' existe déjà.", System.Drawing.Color.Black);
                 }
 
+                //cherche un element appelé Designation
                 ElementId DesignationExiste = TSH.Elements.SearchByName(documentCourantId, DesignationTxt);
                 if (DesignationExiste == ElementId.Empty)
                 {
+                    //Creation parametre smart texte puis renommange en Designation
                     ElementId DesignationParam = TSH.Parameters.CreateSmartTextParameter(documentCourantId, new SmartText(""));
                     TSH.Elements.SetName(DesignationParam, DesignationTxt);
-                    DesignationCreated = true;
+                    DesignationCreated = true; //bool le Designation a bien été créé
                     LogMessage($"Paramètre '{DesignationTxt}' créé.", System.Drawing.Color.Black);
                 }
                 else
                 {
                     LogMessage($"Paramètre '{DesignationTxt}' existe déjà.", System.Drawing.Color.Black);
                 }
-
+                //cherche un element appelé Commentaire
                 ElementId CommentaireExiste = TSH.Elements.SearchByName(documentCourantId, CommentaireTxt);
                 if (CommentaireExiste == ElementId.Empty)
                 {
+                    //Creation parametre smart texte puis renommange en Commentaire
                     ElementId CommentaireParam = TSH.Parameters.CreateSmartTextParameter(documentCourantId, new SmartText(""));
                     TSH.Elements.SetName(CommentaireParam, CommentaireTxt);
-                    CommentaireCreated = true;
+                    CommentaireCreated = true; //bool le commentaire a bien été créé
                     LogMessage($"Paramètre '{CommentaireTxt}' créé.", System.Drawing.Color.Black);
                 }
                 else
@@ -750,33 +757,37 @@ namespace iFixInvalidity
                     LogMessage($"Paramètre '{CommentaireTxt}' existe déjà.", System.Drawing.Color.Black);
                 }
 
+                
+
+
+                //Obtient la liste des publications pour chercher OP 
                 List<ElementId> PublishingListe = TSH.Entities.GetPublishings(documentCourantId);
                 if (PublishingListe != null)
                 {
-                    bool OPIdExisteOui = false;
+                    bool OPIdExisteOui = false; //Initialisation bool existe
                     foreach (ElementId PublishingListeEntities in PublishingListe)
                     {
-                        string OPIdExiste = TSH.Elements.GetName(PublishingListeEntities);
+                        string OPIdExiste = TSH.Elements.GetName(PublishingListeEntities);//obtient le nom des publications
                         MessageBox.Show(OPIdExiste);
-  
+                        
+                        
                         if (OPIdExiste == OPIdTxt)
                         {
-                            OPIdExisteOui = true;
+                            OPIdExisteOui = true; //OP existe
                         }
                         
                     }
 
-                    if (OPIdExisteOui != true)
+                    if (OPIdExisteOui != true) 
                     {
-                        // Récupération du PdmObjectId associé
-                        PdmObjectId pdmObjectId = TSH.Documents.GetPdmObject(documentCourantId);
+                        //Recupere extention du document
+                        string DocumentExt = Extention(documentCourantId);
 
-                        // Récupération de l'extension du document
-                        TSH.Pdm.GetType(pdmObjectId, out string DocumentExt);
+                        //
 
                         if (DocumentExt != null)
                         {
-                            if (DocumentExt == ".TopNewPrtSet" || DocumentExt == ".TopMillTurn")
+                            if (DocumentExt == ".TopNewPrtSet")
                             {
                                 ElementId OPParam = TSH.Parameters.PublishText(documentCourantId, OPIdTxt, new SmartText("1"));
                                 TSH.Elements.SetName(OPParam, OPIdTxt);
@@ -784,7 +795,14 @@ namespace iFixInvalidity
                                 LogMessage($"Paramètre '{OPIdTxt}' créé.", System.Drawing.Color.Black);
                                 return;
                             }
-
+                            if (DocumentExt == ".TopMillTurn")
+                            {
+                                //Creation parametre smart texte puis renommange en Commentaire
+                                ElementId OPParam = TSH.Parameters.CreateSmartTextParameter(documentCourantId, new SmartText(""));
+                                TSH.Elements.SetName(OPParam, OPIdTxt);
+                                OPIdCreated = true; //bool le commentaire a bien été créé
+                                LogMessage($"Paramètre '{OPIdTxt}' créé.", System.Drawing.Color.Black);
+                            }
                         }
                     }
                     else
@@ -828,6 +846,7 @@ namespace iFixInvalidity
             }
         }
 
+        //fonction pour afficher le nom du document courant
         private DocumentId DisplayDocumentName()
         {
             DocumentId documentCourantId = DocumentCourant();
@@ -837,9 +856,11 @@ namespace iFixInvalidity
             return documentCourantId;
         }
 
+
+        //fonction pour afficher le nom du document maitre
         private bool DisplayMasterDocumentName()
         {
-            bool prepaTrouvé = false; // Déclaration de la variable en dehors des blocs if et else
+            //bool prepaTrouvé = false; // Déclaration de la variable en dehors des blocs if et else
 
             try
             {
