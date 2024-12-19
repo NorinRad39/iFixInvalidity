@@ -21,8 +21,10 @@ using System.Diagnostics;
 
 namespace iFixInvalidity
 {
+
     public partial class Form1 : Form
     {
+        bool prepaTrouvé = false;
         public object TopSolidDesign { get; private set; }
 
         public Form1()
@@ -170,78 +172,92 @@ namespace iFixInvalidity
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-        private DocumentId RecupDocuMaster(DocumentId documentCourantId)
+        private (DocumentId PrepaDocument, DocumentId docMaster) RecupDocuMaster(DocumentId documentCourantId, bool firstPrepaDocumentFound = false)
         {
-            
+            DocumentId prepaDocument = DocumentId.Empty;
+            DocumentId docMaster = DocumentId.Empty;
+            bool documentDerivé = TSHD.Tools.IsDerived(documentCourantId);
 
-            if (documentCourantId != null && documentCourantId != DocumentId.Empty)
+            if (!documentDerivé)
             {
-                try
+                if (documentCourantId != null && documentCourantId != DocumentId.Empty)
                 {
-                    // Liste les opérations du document
-                    List<ElementId> operationsList = OperationsList(documentCourantId);
-                    if (operationsList.Count != 0)
+                    try
                     {
-                        // Pour chaque élément de la liste
-                        foreach (ElementId operation in operationsList)
+                        // Liste les opérations du document
+                        List<ElementId> operationsList = OperationsList(documentCourantId);
+                        if (operationsList.Count != 0)
                         {
-                            // Si c'est une inclusion
-                            if (TSHD.Assemblies.IsInclusion(operation))
+                            // Pour chaque élément de la liste
+                            foreach (ElementId operation in operationsList)
                             {
-                                // Récupération de l'élément de l'inclusion
-                                ElementId insertedElementId = TSHD.Assemblies.GetInclusionChildOccurrence(operation);
-                                // Récupération de l'instance du document associé
-                                DocumentId instanceDocument = TSHD.Assemblies.GetOccurrenceDefinition(insertedElementId);
-
-                                // Récupération du PdmObjectId associé
-                                PdmObjectId pdmObjectId = TSH.Documents.GetPdmObject(instanceDocument);
-
-                                // Récupération de l'extension du document
-                                TSH.Pdm.GetType(pdmObjectId, out string DocumentExt);
-
-                                // Si c'est un fichier pièce, renvoyer le document ID
-                                if (DocumentExt == ".TopPrt")
+                                // Si c'est une inclusion
+                                if (TSHD.Assemblies.IsInclusion(operation))
                                 {
-                                    //DisplayMasterDocumentName(instanceDocument);
-                                    LogMessage($"Document pièce trouvé : {instanceDocument}", System.Drawing.Color.Green);
-                                    if (instanceDocument != DocumentId.Empty)
+                                    // Récupération de l'élément de l'inclusion
+                                    ElementId insertedElementId = TSHD.Assemblies.GetInclusionChildOccurrence(operation);
+                                    // Récupération de l'instance du document associé
+                                    DocumentId instanceDocument = TSHD.Assemblies.GetOccurrenceDefinition(insertedElementId);
+
+                                    // Récupération du PdmObjectId associé
+                                    PdmObjectId pdmObjectId = TSH.Documents.GetPdmObject(instanceDocument);
+
+                                    // Récupération de l'extension du document
+                                    TSH.Pdm.GetType(pdmObjectId, out string DocumentExt);
+
+                                    // Si c'est un fichier pièce, renvoyer le document ID
+                                    if (DocumentExt == ".TopPrt")
                                     {
-                                        return instanceDocument;
+                                        LogMessage($"Document pièce trouvé : {instanceDocument}", System.Drawing.Color.Green);
+                                        if (instanceDocument != DocumentId.Empty)
+                                        {
+                                            docMaster = instanceDocument;
+                                            return (prepaDocument, docMaster);
+                                        }
                                     }
-                                }
-                                // Si c'est un document de prépa, relancer la fonction
-                                if (DocumentExt == ".TopNewPrtSet")
-                                {
-                                    LogMessage($"Document de prépa trouvé : {instanceDocument}", System.Drawing.Color.Green);
-                                    DocumentId result = RecupDocuMaster(instanceDocument);
-                                    if (result != DocumentId.Empty)
+                                    // Si c'est un document de prépa, relancer la fonction
+                                    if (DocumentExt == ".TopNewPrtSet")
                                     {
-                                        return result;
+                                        LogMessage($"Document de prépa trouvé : {instanceDocument}", System.Drawing.Color.Green);
+                                        if (!firstPrepaDocumentFound)
+                                        {
+                                            firstPrepaDocumentFound = true;
+                                            prepaDocument = instanceDocument;
+                                        }
+                                        var result = RecupDocuMaster(instanceDocument, firstPrepaDocumentFound);
+                                        if (result.docMaster != DocumentId.Empty)
+                                        {
+                                            docMaster = result.docMaster;
+                                            return (prepaDocument, docMaster);
+                                        }
                                     }
                                 }
                             }
                         }
+                        else
+                        {
+                            LogMessage("Aucune opération trouvée dans le document courant.", System.Drawing.Color.Red);
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        LogMessage("Aucune opération trouvée dans le document courant.", System.Drawing.Color.Red);
+                        LogMessage($"Erreur lors de la récupération du document maître : {ex.Message}", System.Drawing.Color.Red);
+                        MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
-                    return DocumentId.Empty;
                 }
-                catch (Exception ex)
+                else
                 {
-                    LogMessage($"Erreur lors de la récupération du document maître : {ex.Message}", System.Drawing.Color.Red);
-                    MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    // Retourner DocumentId.Empty en cas d'exception
-                    return DocumentId.Empty;
+                    LogMessage("Document courant non valide.", System.Drawing.Color.Red);
                 }
             }
-            // Retourner DocumentId.Empty si documentCourantId est null ou empty
-            LogMessage("Document courant non valide.", System.Drawing.Color.Red);
-            return DocumentId.Empty;
+            else
+            {
+                MessageBox.Show("Le document est un document dérivé.");
+            }
+
+            // Retourner les valeurs par défaut si aucun document maître ou de prépa n'a été trouvé
+            return (prepaDocument, docMaster);
         }
-
-
 
 
         // Récupère la liste des opérations d'un document
@@ -275,7 +291,7 @@ namespace iFixInvalidity
         string OP = "OP";
 
         //Recuperation des parametre dans le document maitre
-        private void ParametreMaster(in DocumentId docMaster, out ElementId indice3D, out ElementId commentaireOriginal, out ElementId designationOriginal , out ElementId OPOriginal)
+        private void ParametreMaster(in DocumentId docMaster, in DocumentId PrepaDocument, out ElementId indice3D, out ElementId commentaireOriginal, out ElementId designationOriginal, out ElementId OPOriginal)
         {
             // Initialisation des paramètres out avec des valeurs par défaut
             indice3D = new ElementId();
@@ -285,6 +301,13 @@ namespace iFixInvalidity
 
             // Recherche des paramètres publiés dans le document maître
             List<ElementId> ParameterPubliéList = TSH.Entities.GetPublishings(docMaster);
+
+            List<ElementId> ParameterPubliéListPrepaDocument = new List<ElementId> ();
+            if (prepaTrouvé)
+            {
+                ParameterPubliéListPrepaDocument = TSH.Entities.GetPublishings(PrepaDocument);
+
+            }
 
             // Si la liste des paramètres publiés n'est pas vide
             if (ParameterPubliéList.Count > 0)
@@ -314,11 +337,6 @@ namespace iFixInvalidity
                             designationOriginal = Parameter;
                             LogMessage($"Paramètre '{Designation}' trouvé.", System.Drawing.Color.Green);
                         }
-                        if (ParameterName == OP)
-                        {
-                            OPOriginal = Parameter;
-                            LogMessage($"Paramètre '{Designation}' trouvé.", System.Drawing.Color.Green);
-                        }
                     }
                 }
                 catch (Exception ex)
@@ -335,19 +353,51 @@ namespace iFixInvalidity
                 commentaireOriginal = new ElementId();
                 designationOriginal = new ElementId();
             }
+
+            if (prepaTrouvé)
+            { 
+                // Recherche des paramètres publiés dans le document de prépa
+                if (ParameterPubliéListPrepaDocument.Count > 0)
+                {
+                    try
+                    {
+                        foreach (ElementId ParameterOP in ParameterPubliéListPrepaDocument)
+                        {
+                            // Récupération du nom de chaque paramètre publié pour comparaison
+                            string ParameterNameOP = TSH.Elements.GetFriendlyName(ParameterOP);
+                            MessageBox.Show(ParameterNameOP);
+
+                            if (ParameterNameOP == OP)
+                            {
+                                OPOriginal = ParameterOP;
+                                LogMessage($"Paramètre '{OP}' trouvé.", System.Drawing.Color.Green);
+                                return; // Sortir de la méthode dès que OPOriginal est trouvé
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LogMessage($"Erreur : lors de la récupération des paramètres OP : {ex.Message}", System.Drawing.Color.Red);
+                        MessageBox.Show("Erreur : lors de la récupération des paramètres OP " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
         }
 
 
 
-        //Recuperation des parametres a modifier.
-        private void SetSmartTxtParameter(DocumentId documentCourantId, SmartText[] SmartTxtTable)
+
+        private void SetSmartTxtParameter(DocumentId documentCourantId, SmartText[] SmartTxtTable, ElementId OPOriginal)
         {
+            ElementId OPPublishingElement = ElementId.Empty;
+
             if (!TopSolidHost.Application.StartModification("My Action", false)) return;
 
             bool CommentaireUpdated = false;
             bool DesignationUpdated = false;
             bool Indice_3DUpdated = false;
             bool OPUpdated = false;
+            bool OPDefinitionSet = false; // Variable pour suivre si la méthode a déjà été exécutée
 
             try
             {
@@ -356,8 +406,7 @@ namespace iFixInvalidity
                 // Recherche des paramètres publiés dans le document courant
                 List<ElementId> ParameterPubliéList = TSH.Parameters.GetParameters(documentCourantId);
 
-
-
+                string DocumentExt = String.Empty;
                 // Si la liste des paramètres publiés n'est pas vide
                 if (ParameterPubliéList.Count > 0)
                 {
@@ -365,6 +414,12 @@ namespace iFixInvalidity
                     {
                         string Parametertype = TSH.Elements.GetTypeFullName(ParameterPublié);
                         // MessageBox.Show(Parametertype);
+
+                        // Récupération du PdmObjectId associé
+                        PdmObjectId pdmObjectId = TSH.Documents.GetPdmObject(documentCourantId);
+
+                        // Récupération de l'extension du document
+                        TSH.Pdm.GetType(pdmObjectId, out DocumentExt);
 
                         if (Parametertype == "TopSolid.Kernel.DB.Parameters.TextParameterEntity")
                         {
@@ -382,8 +437,7 @@ namespace iFixInvalidity
                                 catch (Exception ex)
                                 {
                                     LogMessage($"Erreur : lors de la mise à jour du paramètre 'Commentaire' : {ex.Message}", System.Drawing.Color.Red);
-                                    TopSolidHost.Application.EndModification(false, false);
-                                    return;
+                                    throw; // Relancer l'exception pour s'assurer que le bloc finally est exécuté
                                 }
                             }
                             if (ParameterPubliéName == Designation)
@@ -398,8 +452,7 @@ namespace iFixInvalidity
                                 catch (Exception ex)
                                 {
                                     LogMessage($"Erreur : lors de la mise à jour du paramètre 'Designation' : {ex.Message}", System.Drawing.Color.Red);
-                                    TopSolidHost.Application.EndModification(false, false);
-                                    return;
+                                    throw; // Relancer l'exception pour s'assurer que le bloc finally est exécuté
                                 }
                             }
                             if (ParameterPubliéName == Indice_3D)
@@ -407,32 +460,43 @@ namespace iFixInvalidity
                                 ElementId ParameterPubliéOp = TSH.Elements.GetParent(ParameterPublié);
                                 try
                                 {
-                                    //SmartText tempSmartText = SmartTxtTable[3];
                                     TSH.Parameters.SetSmartTextParameterCreation(ParameterPubliéOp, SmartTxtTable[3]);
                                     Indice_3DUpdated = true;
-                                    LogMessage($"Paramètre '{Indice_3D}' mis à jour." , System.Drawing.Color.Green);
-                                }
-                                catch (Exception ex)
-                                {
-                                    LogMessage($"Erreur : lors de la mise à jour du paramètre 'Indice_3D' : {ex.Message}", System.Drawing.Color.Red);
-                                    TopSolidHost.Application.EndModification(false, false);
-                                    return;
-                                }
-                            }
-                            if (ParameterPubliéName == OP)
-                            {
-                                ElementId ParameterPubliéOp = TSH.Elements.GetParent(ParameterPublié);
-                                try
-                                {
-                                    TSH.Parameters.SetSmartTextParameterCreation(ParameterPubliéOp, SmartTxtTable[0]);
-                                    OPUpdated = true;
                                     LogMessage($"Paramètre '{Indice_3D}' mis à jour.", System.Drawing.Color.Green);
                                 }
                                 catch (Exception ex)
                                 {
                                     LogMessage($"Erreur : lors de la mise à jour du paramètre 'Indice_3D' : {ex.Message}", System.Drawing.Color.Red);
-                                    TopSolidHost.Application.EndModification(false, false);
-                                    return;
+                                    throw; // Relancer l'exception pour s'assurer que le bloc finally est exécuté
+                                }
+                            }
+                        }
+
+                        if (DocumentExt == ".TopMillTurn")
+                        {
+                            List<ElementId> PublishingListe = TSH.Entities.GetPublishings(documentCourantId);
+                            if (PublishingListe != null)
+                            {
+                                foreach (ElementId publishingElement in PublishingListe)
+                                {
+                                    string OPIdExiste = TSH.Elements.GetName(publishingElement);
+                                    //MessageBox.Show(OPIdExiste);
+
+                                    try
+                                    {
+                                        if (OPIdExiste == "OP" && !OPDefinitionSet)
+                                        {
+                                            TSH.Parameters.SetTextPublishingDefinition(publishingElement, SmartTxtTable[0]);
+                                            OPDefinitionSet = true; // Marquer la méthode comme exécutée
+                                            OPUpdated = true;
+                                            LogMessage($"Paramètre '{OP}' mis à jour.", System.Drawing.Color.Green);
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        MessageBox.Show("Erreur : lors de l'édition du paramètre OP " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                        throw; // Relancer l'exception pour s'assurer que le bloc finally est exécuté
+                                    }
                                 }
                             }
                         }
@@ -450,24 +514,27 @@ namespace iFixInvalidity
                                               $"{Indice_3D} : {(Indice_3DUpdated ? "Oui" : "Non")}\n" +
                                               $"{OP} : {(OPUpdated ? "Oui" : "Non")}";
 
-                if (CommentaireUpdated == false || DesignationUpdated == false || Indice_3DUpdated == false || OPUpdated == false)
+                if (DocumentExt == ".TopMillTurn" || CommentaireUpdated == false || DesignationUpdated == false || Indice_3DUpdated == false || OPUpdated == false)
                 {
-                    MessageBox.Show(confirmationMessage + "\n\n Attention, certains paramètres sont peut - être manquants.\n                 Verifiez les documents parents.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(confirmationMessage + "\n\n Attention, certains paramètres sont peut-être manquants.\n Verifiez les documents parents.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
                     LogMessage(confirmationMessage, System.Drawing.Color.Black);
                     MessageBox.Show(confirmationMessage, "Confirmation", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-
-                TopSolidHost.Application.EndModification(true, true);
             }
             catch (Exception ex)
             {
                 LogMessage($"Erreur : lors de la récupération des paramètres courants : {ex.Message}", System.Drawing.Color.Red);
-                TopSolidHost.Application.EndModification(false, false);
+            }
+            finally
+            {
+                TopSolidHost.Application.EndModification(true, true);
             }
         }
+
+
 
         private void LogMessage(string message, System.Drawing.Color color)
         {
@@ -532,10 +599,11 @@ namespace iFixInvalidity
             }
 
             // Fonction recup docu master
-            DocumentId docMaster = RecupDocuMaster(documentCourantId);
+            var (prepaDocument, docMaster) = RecupDocuMaster(documentCourantId);
+
             if (docMaster != DocumentId.Empty)
             {
-                String docMasterName = TSH.Documents.GetName(docMaster);
+                string docMasterName = TSH.Documents.GetName(docMaster);
                 LogMessage($"Document maître trouvé : {docMasterName}", System.Drawing.Color.Green);
                 //MessageBox.Show("Document pièce trouvé : " + docMasterName);
             }
@@ -545,6 +613,19 @@ namespace iFixInvalidity
                 MessageBox.Show("Aucun document maître trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
+            if (prepaDocument != DocumentId.Empty)
+            {
+                string docPrepaName = TSH.Documents.GetName(prepaDocument);
+                LogMessage($"Document de prépa trouvé : {docPrepaName}", System.Drawing.Color.Green);
+                //MessageBox.Show("Document de prépa trouvé : " + docPrepaName);
+            }
+            else
+            {
+                LogMessage("Aucun document de prépa trouvé.", System.Drawing.Color.Red);
+                MessageBox.Show("Aucun document de prépa trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
+
             // Récupération des paramètres de base originaux depuis l'opération d'inclusion
             // Déclaration des variables pour recevoir les valeurs de retour
             ElementId indice3D;
@@ -553,12 +634,12 @@ namespace iFixInvalidity
             ElementId OPOriginal;
 
             // Récupération des paramètres maître
-            ParametreMaster(in docMaster, out indice3D, out commentaireOriginal, out designationOriginal , out OPOriginal);
+            ParametreMaster(in docMaster, in prepaDocument, out indice3D, out commentaireOriginal, out designationOriginal , out OPOriginal);
 
             SmartText SmartTxtCommentaireId = CreateSmartTxt(commentaireOriginal);
             SmartText SmartTxtDesignationId = CreateSmartTxt(designationOriginal);
             SmartText SmartTxtIndice_3DId = CreateSmartTxt(indice3D);
-            SmartText SmartTxtOPId = CreateSmartTxt(OPOriginal);
+            SmartText SmartTxtIndice_OPId = CreateSmartTxt(OPOriginal);
 
             // Déclarer et initialiser un tableau de SmartText
             SmartText[] SmartTxtTable = new SmartText[4];
@@ -568,9 +649,9 @@ namespace iFixInvalidity
             SmartTxtTable[1] = SmartTxtCommentaireId; // Index 1
             SmartTxtTable[2] = SmartTxtDesignationId; // Index 2
             SmartTxtTable[3] = SmartTxtIndice_3DId; // Index 3
-            SmartTxtTable[0] = SmartTxtOPId;
+            SmartTxtTable[0] = SmartTxtIndice_OPId; // Index 0
 
-            SetSmartTxtParameter(documentCourantId, SmartTxtTable);
+            SetSmartTxtParameter(documentCourantId, SmartTxtTable, OPOriginal);
 
             //TSH.Disconnect();
             //Environment.Exit(0);
@@ -669,32 +750,52 @@ namespace iFixInvalidity
                     LogMessage($"Paramètre '{CommentaireTxt}' existe déjà.", System.Drawing.Color.Black);
                 }
 
-                ElementId OPIdExiste = TSH.Elements.SearchByName(documentCourantId, OPIdTxt);
-                if (OPIdExiste == ElementId.Empty)
+                List<ElementId> PublishingListe = TSH.Entities.GetPublishings(documentCourantId);
+                if (PublishingListe != null)
                 {
-                    // Récupération du PdmObjectId associé
-                    PdmObjectId pdmObjectId = TSH.Documents.GetPdmObject(documentCourantId);
-
-                    // Récupération de l'extension du document
-                    TSH.Pdm.GetType(pdmObjectId, out string DocumentExt);
-                     
-                    if (DocumentExt != null)
+                    bool OPIdExisteOui = false;
+                    foreach (ElementId PublishingListeEntities in PublishingListe)
                     {
-                        if (DocumentExt == ".TopNewPrtSet" || DocumentExt == ".TopMillTurn")
+                        string OPIdExiste = TSH.Elements.GetName(PublishingListeEntities);
+                        MessageBox.Show(OPIdExiste);
+  
+                        if (OPIdExiste == OPIdTxt)
                         {
-                            ElementId OPParam = TSH.Parameters.CreateSmartTextParameter(documentCourantId, new SmartText(""));
-                            TSH.Elements.SetName(OPParam, OPIdTxt);
-                            OPIdCreated = true;
-                            LogMessage($"Paramètre '{OPIdTxt}' créé.", System.Drawing.Color.Black);
+                            OPIdExisteOui = true;
+                        }
+                        
+                    }
+
+                    if (OPIdExisteOui != true)
+                    {
+                        // Récupération du PdmObjectId associé
+                        PdmObjectId pdmObjectId = TSH.Documents.GetPdmObject(documentCourantId);
+
+                        // Récupération de l'extension du document
+                        TSH.Pdm.GetType(pdmObjectId, out string DocumentExt);
+
+                        if (DocumentExt != null)
+                        {
+                            if (DocumentExt == ".TopNewPrtSet" || DocumentExt == ".TopMillTurn")
+                            {
+                                ElementId OPParam = TSH.Parameters.PublishText(documentCourantId, OPIdTxt, new SmartText("1"));
+                                TSH.Elements.SetName(OPParam, OPIdTxt);
+                                OPIdCreated = true;
+                                LogMessage($"Paramètre '{OPIdTxt}' créé.", System.Drawing.Color.Black);
+                                return;
+                            }
 
                         }
-                    
+                    }
+                    else
+                    {
+                        LogMessage($"Paramètre '{OPIdTxt}' existe déjà.", System.Drawing.Color.Black);
                     }
 
                 }
-                else
+                else 
                 {
-                    LogMessage($"Paramètre '{OPIdTxt}' existe déjà.", System.Drawing.Color.Black);
+                    LogMessage($"Paramètre '{OPIdTxt}' non trouvé, la liste des parametres est vide", System.Drawing.Color.Black);
                 }
 
                 // Construction du message de confirmation
@@ -714,16 +815,16 @@ namespace iFixInvalidity
                     MessageBox.Show(confirmationMessage, "Confirmation", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
 
-
-
-
-                TopSolidHost.Application.EndModification(true, true);
             }
             catch (Exception ex)
             {
                 LogMessage($"Erreur : {ex.Message}", System.Drawing.Color.Red);
                 MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 TopSolidHost.Application.EndModification(false, false);
+            }
+            finally
+            {
+                TopSolidHost.Application.EndModification(true, true);
             }
         }
 
@@ -736,26 +837,55 @@ namespace iFixInvalidity
             return documentCourantId;
         }
 
-        private void DisplayMasterDocumentName()
+        private bool DisplayMasterDocumentName()
         {
+            bool prepaTrouvé = false; // Déclaration de la variable en dehors des blocs if et else
 
             try
             {
-               
                 DocumentId documentCourantId = DocumentCourant();
                 string documentCourantName = NomDocumentCourant(documentCourantId);
-                DocumentId documentMasterId = RecupDocuMaster(documentCourantId);
-                string documentMasterName = TSH.Documents.GetName(documentMasterId);
 
-                labelDocumentMasterName.Text = documentMasterName;
+                // Appel de la fonction et déstructuration du tuple
+                var (prepaDocument, docMaster) = RecupDocuMaster(documentCourantId);
+
+                // Vérification du document maître
+                if (docMaster != DocumentId.Empty)
+                {
+                    string documentMasterName = TSH.Documents.GetName(docMaster);
+                    labelDocumentMasterName.Text = documentMasterName;
+                    LogMessage($"Document maître trouvé : {documentMasterName}", System.Drawing.Color.Green);
+                }
+                else
+                {
+                    labelDocumentMasterName.Text = "Aucun document maître trouvé.";
+                    LogMessage("Aucun document maître trouvé.", System.Drawing.Color.Red);
+                    MessageBox.Show("Aucun document maître trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+
+                // Vérification du document de prépa
+                if (prepaDocument != DocumentId.Empty)
+                {
+                    string docPrepaName = TSH.Documents.GetName(prepaDocument);
+                    LogMessage($"Document de prépa trouvé : {docPrepaName}", System.Drawing.Color.Green);
+                    prepaTrouvé = true;
+                }
+                else
+                {
+                    LogMessage("Aucun document de prépa trouvé.", System.Drawing.Color.Red);
+                    //MessageBox.Show("Aucun document de prépa trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    prepaTrouvé = false;
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Erreur : lors de l'affiche des noms des documents" + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Erreur : lors de l'affichage des noms des documents " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
-
+            return prepaTrouvé; // Retour de la valeur de prepaTrouvé
         }
+
+
 
         private void buttonRestart_Click(object sender, EventArgs e)
         {
