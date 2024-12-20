@@ -488,6 +488,7 @@ namespace iFixInvalidity
                                         TSH.Parameters.SetSmartTextParameterCreation(ParameterPubliéOp, SmartTxtTable[0]);
                                         OPDefinitionSet = true; // Marquer la méthode comme exécutée
                                         LogMessage($"Paramètre '{OP}' mis à jour.", System.Drawing.Color.Green);
+                                        OPUpdated = true;
                                     }
                                     catch (Exception ex)
                                     {
@@ -945,7 +946,32 @@ namespace iFixInvalidity
             Application.Exit();
         }
 
-        
+        private void button3_Click(object sender, EventArgs e)
+        {
+
+
+            try
+            {
+                //// Lancer la commande
+                //// Créer une instance de UserQuestion
+                //var userQuestion = new UserQuestion
+                //{
+                //    AcceptsAuto = true // Activer la réponse automatique
+                //};
+                UserQuestion userQuestion = new UserQuestion();
+                bool okAuto = true;
+                okAuto = userQuestion.AcceptsAuto;
+                TSH.Application.InvokeCommand("TopSolid.Cad.Design.UI.Publishings.PublishingsInheritingCommand");
+
+                //// Réinitialiser AcceptsAuto après l'exécution si nécessaire
+                //userQuestion.AcceptsAuto = false;
+            }
+            catch (Exception ex)
+            {
+                // Gérer les exceptions
+                MessageBox.Show("Erreur lors de l'exécution de la commande : " + ex.Message);
+            }
+        }
     }
 
     internal class Elementid
