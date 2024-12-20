@@ -290,9 +290,18 @@ namespace iFixInvalidity
         string Indice_3D = "Indice 3D";
         string OP = "OP";
 
+
+
         //Recuperation des parametre dans le document maitre
         private void ParametreMaster(in DocumentId docMaster, in DocumentId PrepaDocument, out ElementId indice3D, out ElementId commentaireOriginal, out ElementId designationOriginal, out ElementId OPOriginal)
         {
+            if (PrepaDocument != DocumentId.Empty)
+            {
+
+                string nomDocPrepa = TSH.Documents.GetName(PrepaDocument);
+                MessageBox.Show(nomDocPrepa);
+            }
+
             // Initialisation des paramètres out avec des valeurs par défaut
             indice3D = new ElementId();
             commentaireOriginal = new ElementId();
@@ -302,12 +311,13 @@ namespace iFixInvalidity
             // Recherche des paramètres publiés dans le document maître
             List<ElementId> ParameterPubliéList = TSH.Entities.GetPublishings(docMaster);
 
-            List<ElementId> ParameterPubliéListPrepaDocument = new List<ElementId> ();
+            List<ElementId> ParameterPubliéListPrepaDocument = new List<ElementId>();
             if (prepaTrouvé)
             {
                 ParameterPubliéListPrepaDocument = TSH.Entities.GetPublishings(PrepaDocument);
-
             }
+
+            bool opOriginalFound = false; // Drapeau pour indiquer si OPOriginal a été trouvé
 
             // Si la liste des paramètres publiés n'est pas vide
             if (ParameterPubliéList.Count > 0)
@@ -319,7 +329,7 @@ namespace iFixInvalidity
                     {
                         // Récupération du nom de chaque paramètre publié pour comparaison
                         string ParameterName = TSH.Elements.GetFriendlyName(Parameter);
-                        // MessageBox.Show(ParameterName);
+                        //MessageBox.Show(ParameterName);
 
                         // Si le nom du paramètre est égal au nom attendu, renvoyer l'Element ID
                         if (ParameterName == Indice_3D)
@@ -337,20 +347,20 @@ namespace iFixInvalidity
                             designationOriginal = Parameter;
                             LogMessage($"Paramètre '{Designation}' trouvé.", System.Drawing.Color.Green);
                         }
-                        if (prepaTrouvé)
+                        if (prepaTrouvé && !opOriginalFound)
                         {
                             try
                             {
-                                foreach(ElementId ParameterPrepaDocument in ParameterPubliéListPrepaDocument)
+                                foreach (ElementId ParameterPrepaDocument in ParameterPubliéListPrepaDocument)
                                 {
-
                                     string ParameterPrepaDocumentName = TSH.Elements.GetFriendlyName(ParameterPrepaDocument);
 
                                     if (ParameterPrepaDocumentName == OP)
                                     {
-                                        OPOriginal = Parameter;
+                                        OPOriginal = ParameterPrepaDocument; // Correction ici
                                         LogMessage($"Paramètre '{OP}' trouvé.", System.Drawing.Color.Green);
-                                        return; // Sortir de la méthode dès que OPOriginal est trouvé
+                                        opOriginalFound = true; // Mettre le drapeau à true
+                                        break; // Sortir de la boucle interne
                                     }
                                 }
                             }
@@ -376,8 +386,9 @@ namespace iFixInvalidity
                 commentaireOriginal = new ElementId();
                 designationOriginal = new ElementId();
             }
- 
         }
+
+
 
 
 
@@ -757,7 +768,7 @@ namespace iFixInvalidity
                     LogMessage($"Paramètre '{CommentaireTxt}' existe déjà.", System.Drawing.Color.Black);
                 }
 
-                
+
 
 
                 //Obtient la liste des publications pour chercher OP 
@@ -768,17 +779,17 @@ namespace iFixInvalidity
                     foreach (ElementId PublishingListeEntities in PublishingListe)
                     {
                         string OPIdExiste = TSH.Elements.GetName(PublishingListeEntities);//obtient le nom des publications
-                        MessageBox.Show(OPIdExiste);
-                        
-                        
+                        //MessageBox.Show(OPIdExiste);
+
+
                         if (OPIdExiste == OPIdTxt)
                         {
                             OPIdExisteOui = true; //OP existe
                         }
-                        
+
                     }
 
-                    if (OPIdExisteOui != true) 
+                    if (OPIdExisteOui != true)
                     {
                         //Recupere extention du document
                         string DocumentExt = Extention(documentCourantId);
@@ -797,42 +808,51 @@ namespace iFixInvalidity
                             }
                             if (DocumentExt == ".TopMillTurn")
                             {
-                                //Creation parametre smart texte puis renommange en Commentaire
-                                ElementId OPParam = TSH.Parameters.CreateSmartTextParameter(documentCourantId, new SmartText(""));
-                                TSH.Elements.SetName(OPParam, OPIdTxt);
-                                OPIdCreated = true; //bool le commentaire a bien été créé
-                                LogMessage($"Paramètre '{OPIdTxt}' créé.", System.Drawing.Color.Black);
+                                ElementId OPExiste = TSH.Elements.SearchByName(documentCourantId, OPIdTxt);
+                                if (OPExiste == ElementId.Empty)
+                                {
+                                    //Creation parametre smart texte puis renommange en Commentaire
+                                    ElementId OPParam = TSH.Parameters.CreateSmartTextParameter(documentCourantId, new SmartText(""));
+                                    TSH.Elements.SetName(OPParam, OPIdTxt);
+                                    OPIdCreated = true; //bool le commentaire a bien été créé
+                                    LogMessage($"Paramètre '{OPIdTxt}' créé.", System.Drawing.Color.Black);
+                                }
+                                else
+                                {
+                                    LogMessage($"Paramètre '{CommentaireTxt}' existe déjà.", System.Drawing.Color.Black);
+                                }
                             }
+
                         }
+                        else
+                        {
+                            LogMessage($"Paramètre '{OPIdTxt}' existe déjà.", System.Drawing.Color.Black);
+                        }
+
                     }
                     else
                     {
-                        LogMessage($"Paramètre '{OPIdTxt}' existe déjà.", System.Drawing.Color.Black);
+                        LogMessage($"Paramètre '{OPIdTxt}' non trouvé, la liste des parametres est vide", System.Drawing.Color.Black);
+                    }
+
+                    // Construction du message de confirmation
+                    string confirmationMessage = $"Paramètres créés :\n" +
+                                                  $"{Indice_3DTxt} : {(Indice_3DCreated ? "Oui" : "Non!")}\n" +
+                                                  $"{DesignationTxt} : {(DesignationCreated ? "Oui" : "Non!")}\n" +
+                                                  $"{CommentaireTxt} : {(CommentaireCreated ? "Oui" : "Non!")}\n" +
+                                                  $"{OPIdTxt} : {(OPIdCreated ? "Oui" : "Non!")}";
+
+                    if (Indice_3DCreated == false || DesignationCreated == false || CommentaireCreated == false || OPIdCreated == false)
+                    {
+                        MessageBox.Show(confirmationMessage + "\n\n certains paramètres existent deja", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                    else
+                    {
+                        LogMessage(confirmationMessage, System.Drawing.Color.Black);
+                        //MessageBox.Show(confirmationMessage, "Confirmation", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
 
                 }
-                else 
-                {
-                    LogMessage($"Paramètre '{OPIdTxt}' non trouvé, la liste des parametres est vide", System.Drawing.Color.Black);
-                }
-
-                // Construction du message de confirmation
-                string confirmationMessage = $"Paramètres créés :\n" +
-                                              $"{Indice_3DTxt} : {(Indice_3DCreated ? "Oui" : "Non!")}\n" +
-                                              $"{DesignationTxt} : {(DesignationCreated ? "Oui" : "Non!")}\n" +
-                                              $"{CommentaireTxt} : {(CommentaireCreated ? "Oui" : "Non!")}\n" +
-                                              $"{OPIdTxt} : {(OPIdCreated ? "Oui" : "Non!")}";
-
-                if (Indice_3DCreated == false || DesignationCreated == false || CommentaireCreated == false || OPIdCreated == false)
-                {
-                    MessageBox.Show(confirmationMessage + "\n\n certains paramètres existent deja", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-                else
-                {
-                    LogMessage(confirmationMessage, System.Drawing.Color.Black);
-                    MessageBox.Show(confirmationMessage, "Confirmation", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-
             }
             catch (Exception ex)
             {
