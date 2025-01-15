@@ -638,6 +638,60 @@ namespace iFixInvalidity
             return SmartTxtId;
         }
 
+        private void DerivationConfig(DocumentId documentCourantId)
+        {
+            if (documentCourantId != null) 
+            {
+                bool isDerived = TSHD.Tools.IsDerived(documentCourantId);
+                if (isDerived)
+                {
+                    if (TopSolidHost.Application.StartModification("My Modification", false))
+                    {
+                        try
+                        {
+                            TSHD.Tools.SetDerivationInheritances
+                            (
+                                documentCourantId,//DocumentId inDocumentId
+                                false,//bool inName, 
+                                false,//bool inDescription,
+                                false,//bool inCode,
+                                false,//bool inPartNumber,
+                                false,//bool inComplementaryPartNumber,
+                                false,//bool inManufacturer,
+                                false,//bool inManufacturerPartNumber,
+                                false,//bool inComment,
+                                new List<ElementId>(),//List < ElementId > inOtherSystemParameters,
+                                false,//bool inNonSystemParameters,  
+                                true,//bool inPoints,    
+                                true,//bool inAxes,   
+                                true,//bool inPlanes,  
+                                true,//bool inFrames,   
+                                true,// bool inSketches, 
+                                true,//bool inShapes,
+                                true,//bool inPublishings,
+                                true,// bool inFunctions,  
+                                true,//bool inSymmetries,   
+                                true,//bool inUnsectionabilities,   
+                                false,//bool inRepresentations,   
+                                false,//bool inSets,
+                                true//bool inCameras
+                            );
+
+                            TopSolidHost.Application.EndModification(true, true);
+                        }
+                        catch(Exception ex)
+                        {
+                            MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            TopSolidHost.Application.EndModification(false, false);
+                        }
+                    }
+
+                }
+            }
+
+        }
+
+
 
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         // Gestionnaire de clic pour le bouton.-----------------------------------------------------------------------------------------------------------------------------------------
@@ -673,6 +727,9 @@ namespace iFixInvalidity
 
             // Fonction recup docu master
             var (prepaDocument, docMaster) = RecupDocuMaster(documentCourantId);
+
+            //Configuration parametre de derivation si c'est un document derivé
+            DerivationConfig(documentCourantId);
 
             if (docMaster != DocumentId.Empty)
             {
@@ -761,6 +818,8 @@ namespace iFixInvalidity
         {
             DocumentId documentCourantId = DocumentCourant();
 
+
+
             // Vérification de documentCourantId
             if (documentCourantId == null || documentCourantId == DocumentId.Empty)
             {
@@ -769,12 +828,16 @@ namespace iFixInvalidity
                 return;
             }
 
+            //Configuration parametre de derivation si c'est un document derivé
+            DerivationConfig(documentCourantId);
+
             if (!TopSolidHost.Application.StartModification("My Action", false))
             {
                 LogMessage("Erreur : Impossible de démarrer la modification.", System.Drawing.Color.Red);
                 MessageBox.Show("Erreur : Impossible de démarrer la modification.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+            
 
             try
             {
