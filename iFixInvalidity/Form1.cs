@@ -245,7 +245,7 @@ namespace iFixInvalidity
             }
             else
             {
-                MessageBox.Show("Le document est un document dérivé.");
+                //MessageBox.Show("Le document est un document dérivé.");
 
                 DocumentId docBaseDerivation = TSHD.Tools.GetBaseDocument(documentCourantId);
                 var result = RecupDocuMaster(docBaseDerivation, firstPrepaDocumentFound);
@@ -363,9 +363,9 @@ namespace iFixInvalidity
 
                                     foreach (ElementId parameter in parameters)
                                     {
-                                        string operationPrepaDocumentName = TSH.Elements.GetFriendlyName(parameter);
+                                        string parameterTxt = TSH.Elements.GetFriendlyName(parameter);
 
-                                        if (operationPrepaDocumentName == OP)
+                                        if (parameterTxt == OP)
                                         {
                                             OPOriginal = parameter; 
                                             LogMessage($"Paramètre '{OP}' trouvé.", System.Drawing.Color.Green);
@@ -520,6 +520,43 @@ namespace iFixInvalidity
 
                                 }
                             }
+                            else if (DocumentExt == ".TopNewPrtSet")
+                            {
+                                bool dérivé = TSHD.Tools.IsDerived(documentCourantId);
+                                if (dérivé)
+                                {
+                                    ElementId opCourantPrepa = RecupOpCourantPrepa(documentCourantId);
+
+                                    DocumentId docBase = TSHD.Tools.GetBaseDocument(documentCourantId);
+                                   List<ElementId> parameters = TSH.Parameters.GetParameters(docBase);
+                                    foreach (ElementId parameter in parameters)
+                                    {
+                                        string parameterTxt = TSH.Elements.GetFriendlyName(parameter);
+ 
+                                        if (parameterTxt == OP)
+                                        {
+                                            string parameterValue = TSH.Parameters.GetTextValue(parameter);
+                                            int parameterValueInt = int.Parse(parameterValue);
+                                            int newParameterValueInt = parameterValueInt + 1;
+                                            string newParameterValue = newParameterValueInt.ToString();
+                                            SmartText parameterValueIntSmartTxt = new SmartText(newParameterValue);
+
+
+                                            TSH.Parameters.SetSmartTextParameterCreation(opCourantPrepa, parameterValueIntSmartTxt);
+
+                                            LogMessage($"Paramètre '{OP}' trouvé.", System.Drawing.Color.Green);
+                                            //opOriginalFound = true; // Mettre le drapeau à true
+                                            dérivé = false;
+                                            break; // Sortir de la boucle interne
+                                        }
+                     
+                                    }
+                                
+
+                                    
+                                }                          
+                            }
+
                         }
                     }
                 }
@@ -527,6 +564,11 @@ namespace iFixInvalidity
                 {
                     LogMessage("Erreur : La liste des paramètres courants est vide", System.Drawing.Color.Red);
                 }
+
+               
+
+
+
 
                 // Construction du message de confirmation
                 string confirmationMessage = $"Paramètres mis à jour :\n" +
@@ -553,6 +595,21 @@ namespace iFixInvalidity
             {
                 TopSolidHost.Application.EndModification(true, true);
             }
+        }
+
+        private ElementId RecupOpCourantPrepa(DocumentId documentCourantId)
+        {
+            List<ElementId> parameters = TSH.Operations.GetOperations(documentCourantId);
+            foreach (ElementId parameter in parameters)
+            {
+                string parameterName = TSH.Elements.GetFriendlyName(parameter);
+                if (parameterName == "Paramètre texte (OP)")
+                {
+                    return parameter;
+                }
+            }
+            throw new InvalidOperationException("Aucun paramètre 'OP' trouvé.");
+
         }
 
         private void LogMessage(string message, System.Drawing.Color color)
@@ -605,7 +662,7 @@ namespace iFixInvalidity
                 else
                 {
                     LogMessage("Aucun document courant trouvé.", System.Drawing.Color.Red);
-                    MessageBox.Show("Aucun document courant trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    //MessageBox.Show("Aucun document courant trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
             catch (Exception ex)
@@ -626,7 +683,7 @@ namespace iFixInvalidity
             else
             {
                 LogMessage("Aucun document maître trouvé.", System.Drawing.Color.Red);
-                MessageBox.Show("Aucun document maître trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                //MessageBox.Show("Aucun document maître trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
             if (prepaDocument != DocumentId.Empty)
@@ -734,6 +791,7 @@ namespace iFixInvalidity
                 bool OPIdCreated = false;
                 ElementId ModelingStage = new ElementId();
 
+                //Recup etape modelisation
                 try
                 {
                  ModelingStage = TSH.Operations.GetModelingStage(documentCourantId);
@@ -743,6 +801,7 @@ namespace iFixInvalidity
                     MessageBox.Show("Erreur : La recuperation de l'étape modélisation a échoué" + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
 
+                //passe à l'etape modelisation
                 try
                 {
                  TSH.Operations.SetWorkingStage(ModelingStage);
@@ -751,7 +810,6 @@ namespace iFixInvalidity
                 {
                     MessageBox.Show("Erreur : L'activation de l'étape modélisation a échoué" + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
-               
 
                 //cherche un element appelé Indice 3D
                 ElementId Indice_3DExiste = TSH.Elements.SearchByName(documentCourantId, Indice_3DTxt);
@@ -795,7 +853,6 @@ namespace iFixInvalidity
                 {
                     LogMessage($"Paramètre '{CommentaireTxt}' existe déjà.", System.Drawing.Color.Black);
                 }
-
                 //Obtient la liste des publications pour chercher OP 
                 List<ElementId> PublishingListe = TSH.Entities.GetPublishings(documentCourantId);
                 if (PublishingListe != null)
@@ -937,7 +994,7 @@ namespace iFixInvalidity
                 {
                     labelDocumentMasterName.Text = "Aucun document maître trouvé.";
                     LogMessage("Aucun document maître trouvé.", System.Drawing.Color.Red);
-                    MessageBox.Show("Aucun document maître trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    //MessageBox.Show("Aucun document maître trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
 
                 // Vérification du document de prépa
