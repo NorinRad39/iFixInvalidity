@@ -159,10 +159,6 @@ namespace iFixInvalidity
             }
         }
 
-
-
-
-
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         //Fonction recurcive pour remonter au document piece original-------------------------------------------------------------------------------------------------------------------
@@ -635,11 +631,20 @@ namespace iFixInvalidity
             richTextBox1.ScrollToCaret();
         }
 
+        //Fonction pour creer un smart text
         private SmartText CreateSmartTxt(ElementId smartTxt)
         {
-            SmartText SmartTxtId = new SmartText(smartTxt);
+            SmartText smartTxtId = new SmartText(smartTxt);
             LogMessage($"SmartText créé pour l'élément : {smartTxt}", System.Drawing.Color.Green);
-            return SmartTxtId;
+            return smartTxtId;
+        }
+
+        //Fonction pour creer un smart real
+        private SmartReal CreateSmartReal(ElementId real)
+        {
+            SmartReal smartRealtId = new SmartReal(real);
+            LogMessage($"SmartText créé pour l'élément : {real}", System.Drawing.Color.Green);
+            return smartRealtId;
         }
 
         //Configuration des parametres de derivations
@@ -701,33 +706,34 @@ namespace iFixInvalidity
         {
             List<ElementId> operations = TSH.Operations.GetOperations(documentCourantId);
             List<ElementId> paramElecList = new List<ElementId>();
-            string nomCom = "";
             string nom = "";
             string Indice_3DOp = "Paramètre texte (Indice 3D)";
-            string CommentaireOp = "Paramètre texte (Commentaire)";
+            string CommentaireOp = "Paramètre texte (Nom_docu)";
             string DesignationOp = "Paramètre texte (Designation)";
 
             ElementId nomDocu = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeName");
             ElementId nomElec = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Kernel.TX.Properties.Name");
             ElementId designationPiece = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeDescription");
-            
+            //ElementId indice3DElec = TSH.Elements.SearchByName(documentCourantId, "Indice_Elec");
+
+
             SmartText nomDocuSmart = CreateSmartTxt(nomDocu);
             SmartText nomElecSmart = CreateSmartTxt(nomElec);
             SmartText designationPieceSmart = CreateSmartTxt(designationPiece);
+            //SmartText indice3DElecSmart = CreateSmartTxt(indice3DElec);
+
 
             // Déclarer et initialiser un tableau de SmartText
-            SmartText[] SmartTxtTable = new SmartText[3];
+            SmartText[] SmartTxtTable = new SmartText[4];
 
             SmartTxtTable[0] = nomDocuSmart; // Index 0
             SmartTxtTable[1] = nomElecSmart; // Index 1
             SmartTxtTable[2] = designationPieceSmart; // Index 2
-           
+            //SmartTxtTable[3] = indice3DElecSmart; // Index 3
 
 
             foreach (ElementId operation in operations) 
             {
-                ElementId commentSysParam = new ElementId();
-
                 try
                 {
                    nom = TSH.Elements.GetFriendlyName(operation);
@@ -738,65 +744,157 @@ namespace iFixInvalidity
                     MessageBox.Show("Erreur : Impossible de recuperer le nom des parametres electrode " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
 
-
-                if (!TopSolidHost.Application.StartModification("My Action", false)) return;
-                try
+                if (nom == CommentaireOp)
                 {
-
-                    if (nom == CommentaireOp)
-                    {
-                        TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[0]);
-                    }
-                    if (nom == DesignationOp)
-                    {
-                        TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[2]);
-                    }
-                    //if (nom == Indice_3D)
-                    //{
-
-                    //}
-
-
-                    TopSolidHost.Application.EndModification(true, true);
+                    TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[0]);
                 }
-                catch
+                if (nom == DesignationOp)
                 {
-                    // End modification (failure).
-                    TopSolidHost.Application.EndModification(false, false);
+                    TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[2]);
                 }
+                //if (nom == Indice_3DOp)
+                //{
+                //    TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[3]);
 
+                //}
 
-                
             }
             
         }
 
+        //Recherche element publié par sont nom
+        private bool GapPublishExist(List<ElementId> publishingList, string NomRecherhe)
+        {
+            if (publishingList.Count>0)
+            {
+                foreach (var item in publishingList)
+                {
+                   string name = TSH.Elements.GetName(item);
+                    if (name == NomRecherhe) 
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        //Recupere les parametres de Gap et les publie
         private void GapPublish(DocumentId documentCourantId)
         {
-            List<ElementId> electrodes = new List<ElementId>();
-            try
-            {
-                electrodes = TSEH.Electrodes.GetElectrodes(documentCourantId, false);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            //Declaration de nom des parametre apres publication
+            string GapEb = "Gap EB";
+            string GapDemiFini = "Gap Demi-Fini";
+            string GapFini = "Gap Fini";
 
+            //Declaration de nom des parametre a publier
+            string GapEbExisteTxt = "Ebauche";
+            string GapDemiFiniExisteTxt = "Demi-finition";
+            string GapFiniExisteTxt = "Finition";
 
-            foreach (ElementId electrode in electrodes)
-            {
-                List<ElementId> gaps = TSEH.Electrodes.GetElectrodeGaps(electrode);
+            //Recherche des parametre a publier
+            ElementId GapEbId = SearchParamByName(documentCourantId, GapEbExisteTxt);
+            ElementId GapDemiFiniId = SearchParamByName(documentCourantId, GapDemiFiniExisteTxt);
+            ElementId GapFiniId = SearchParamByName(documentCourantId, GapFiniExisteTxt);
+            //Creation des smart texte pour le publication
+            SmartReal gapEbPublie = new SmartReal (ElementId.Empty);
+            SmartReal gapDemiFiniPublie = new SmartReal(ElementId.Empty);
+            SmartReal gapFiniPublie = new SmartReal(ElementId.Empty);
 
-                    int nbr = 1;
-                foreach (ElementId gap in gaps)
+            //Recuperation des parametres deja publié
+            List<ElementId> publishingList = TSH.Entities.GetPublishings(documentCourantId);
+
+            //Verification si les parametres sont deja publié
+            bool gapEbExist = GapPublishExist( publishingList, GapEb);
+            bool gapDemiFiniExist = GapPublishExist(publishingList, GapDemiFini);
+            bool gapFinibExist = GapPublishExist(publishingList, GapFini);
+
+                //Publication des parametres
+                if (!gapEbExist) 
                 {
-                    SmartReal gapSmart = new SmartReal( gap);
-                    ElementId gapPublish = TSH.Parameters.PublishReal(documentCourantId, "Gap" + nbr, gapSmart);
-                        nbr = 1 + 1;
+                    if (GapEbId != ElementId.Empty)
+                    {
+                        gapEbPublie = CreateSmartReal(GapEbId);
+                        ElementId realpublie = TSH.Parameters.PublishReal(documentCourantId, GapEb, gapEbPublie);
+                        TSH.Elements.SetName(realpublie, GapEb);
+                    }
                 }
+                if (!gapDemiFiniExist)
+                {
+                    if (GapDemiFiniId != ElementId.Empty)
+                    {
+                        gapDemiFiniPublie = CreateSmartReal(GapDemiFiniId);
+                        ElementId realpublie = TSH.Parameters.PublishReal(documentCourantId, GapDemiFini, gapDemiFiniPublie);
+                        TSH.Elements.SetName(realpublie, GapDemiFini);
+                    }
+                }
+                if (!gapFinibExist)
+                {
+                    if (GapFiniId != ElementId.Empty)
+                    {
+                        gapFiniPublie = CreateSmartReal(GapFiniId);
+                        ElementId realpublie = TSH.Parameters.PublishReal(documentCourantId, GapFini, gapFiniPublie);
+                        TSH.Elements.SetName(realpublie, GapFini);
+                    }
+                }
+  
+        }
 
+        //Cherche un parametre par son nom dans un document
+        private ElementId SearchParamByName(DocumentId documentCourantId, string nomParam)
+        {
+            if(documentCourantId != null)
+            {
+                List<ElementId> listeParam = new List<ElementId>();
+                try
+                {
+                    listeParam = TSH.Parameters.GetParameters(documentCourantId);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Erreur : Impossible de recuperer la liste des paramétres " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                if (listeParam.Count > 0)
+                {
+                    foreach (ElementId param in listeParam)
+                    {
+                        string paramName = string.Empty;
+                        try
+                        {
+                            paramName = TSH.Elements.GetName(param);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                        if (paramName != string.Empty || paramName != null )
+                        {
+                            if (paramName == nomParam)
+                            {
+                                return param;
+                            }
+                        }
+                    }
+                }
             }
+                return ElementId.Empty;
+        }
+
+        private bool Iselectrode (DocumentId documentCourantId)
+        {
+            List<ElementId> parameterListe = TSH.Parameters.GetParameters (documentCourantId);
+
+            foreach (ElementId param in parameterListe) 
+            {
+                string nom = TSH.Elements.GetName(param);
+                if (nom == "$TopSolid.Cad.Electrode.DB.Electrodes.ElectrodeDocument")
+                {
+                    return true;
+                   
+
+                }
+            }
+            return false;
 
         }
 
@@ -834,75 +932,89 @@ namespace iFixInvalidity
 
             string ext = Extention(documentCourantId);
 
+            bool iselectrode = Iselectrode(documentCourantId);
+
             if (ext != null)
             {
-                if (ext == ".TopPrt")
+                if (ext == ".TopPrt") //Document type electrode
                 {
-                     ParamElecListe(documentCourantId);
+                    if (iselectrode)
+                    { 
+                        if (!TopSolidHost.Application.StartModification("My Action", false)) return;
+                        try
+                        {
+                            TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
 
-                    GapPublish(documentCourantId);
+                            ParamElecListe(documentCourantId);
+                            GapPublish(documentCourantId);
 
+                            TopSolidHost.Application.EndModification(true, true);
+                        }
+                        catch
+                        {
+                            // End modification (failure).
+                            TopSolidHost.Application.EndModification(false, false);
+                        }
 
-
-
-                } 
-            }
-            else
-            {  
-                // Fonction recup docu master
-                var (prepaDocument, docMaster) = RecupDocuMaster(documentCourantId);
-
-                //Configuration parametre de derivation si c'est un document derivé
-                DerivationConfig(documentCourantId);
-
-                if (docMaster != DocumentId.Empty)
-                {
-                    string docMasterName = TSH.Documents.GetName(docMaster);
-                    LogMessage($"Document maître trouvé : {docMasterName}", System.Drawing.Color.Green);
-                    //MessageBox.Show("Document pièce trouvé : " + docMasterName);
+                    }
                 }
-                else
-                {
-                    LogMessage("Aucun document maître trouvé.", System.Drawing.Color.Red);
-                    //MessageBox.Show("Aucun document maître trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-                if (prepaDocument != DocumentId.Empty)
-                {
-                    string docPrepaName = TSH.Documents.GetName(prepaDocument);
-                    LogMessage($"Document de prépa trouvé : {docPrepaName}", System.Drawing.Color.Green);
-                    //MessageBox.Show("Document de prépa trouvé : " + docPrepaName);
-                }
-                else
-                {
-                    LogMessage("Aucun document de prépa trouvé.", System.Drawing.Color.Red);
-                    MessageBox.Show("Aucun document de prépa trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-                // Récupération des paramètres de base originaux depuis l'opération d'inclusion
-                // Déclaration des variables pour recevoir les valeurs de retour
-                ElementId indice3D;
-                ElementId commentaireOriginal;
-                ElementId designationOriginal;
-                ElementId OPOriginal;
-
-                // Récupération des paramètres maître
-                ParametreMaster(in docMaster, in prepaDocument, out indice3D, out commentaireOriginal, out designationOriginal , out OPOriginal);
-
-                SmartText SmartTxtCommentaireId = CreateSmartTxt(commentaireOriginal);
-                SmartText SmartTxtDesignationId = CreateSmartTxt(designationOriginal);
-                SmartText SmartTxtIndice_3DId = CreateSmartTxt(indice3D);
-                SmartText SmartTxtIndice_OPId = CreateSmartTxt(OPOriginal);
-
-                // Déclarer et initialiser un tableau de SmartText
-                SmartText[] SmartTxtTable = new SmartText[4];
-
-                SmartTxtTable[1] = SmartTxtCommentaireId; // Index 1
-                SmartTxtTable[2] = SmartTxtDesignationId; // Index 2
-                SmartTxtTable[3] = SmartTxtIndice_3DId; // Index 3
-                SmartTxtTable[0] = SmartTxtIndice_OPId; // Index 0
-
-                SetSmartTxtParameter(documentCourantId, SmartTxtTable, OPOriginal);
-            }
             
+                else
+                {
+                    // Fonction recup docu master
+                    var (prepaDocument, docMaster) = RecupDocuMaster(documentCourantId);
+
+                    //Configuration parametre de derivation si c'est un document derivé
+                    DerivationConfig(documentCourantId);
+
+                    if (docMaster != DocumentId.Empty)
+                    {
+                        string docMasterName = TSH.Documents.GetName(docMaster);
+                        LogMessage($"Document maître trouvé : {docMasterName}", System.Drawing.Color.Green);
+                        //MessageBox.Show("Document pièce trouvé : " + docMasterName);
+                    }
+                    else
+                    {
+                        LogMessage("Aucun document maître trouvé.", System.Drawing.Color.Red);
+                        //MessageBox.Show("Aucun document maître trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                    if (prepaDocument != DocumentId.Empty)
+                    {
+                        string docPrepaName = TSH.Documents.GetName(prepaDocument);
+                        LogMessage($"Document de prépa trouvé : {docPrepaName}", System.Drawing.Color.Green);
+                        //MessageBox.Show("Document de prépa trouvé : " + docPrepaName);
+                    }
+                    else
+                    {
+                        LogMessage("Aucun document de prépa trouvé.", System.Drawing.Color.Red);
+                        MessageBox.Show("Aucun document de prépa trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                    // Récupération des paramètres de base originaux depuis l'opération d'inclusion
+                    // Déclaration des variables pour recevoir les valeurs de retour
+                    ElementId indice3D;
+                    ElementId commentaireOriginal;
+                    ElementId designationOriginal;
+                    ElementId OPOriginal;
+
+                    // Récupération des paramètres maître
+                    ParametreMaster(in docMaster, in prepaDocument, out indice3D, out commentaireOriginal, out designationOriginal, out OPOriginal);
+
+                    SmartText SmartTxtCommentaireId = CreateSmartTxt(commentaireOriginal);
+                    SmartText SmartTxtDesignationId = CreateSmartTxt(designationOriginal);
+                    SmartText SmartTxtIndice_3DId = CreateSmartTxt(indice3D);
+                    SmartText SmartTxtIndice_OPId = CreateSmartTxt(OPOriginal);
+
+                    // Déclarer et initialiser un tableau de SmartText
+                    SmartText[] SmartTxtTable = new SmartText[4];
+
+                    SmartTxtTable[1] = SmartTxtCommentaireId; // Index 1
+                    SmartTxtTable[2] = SmartTxtDesignationId; // Index 2
+                    SmartTxtTable[3] = SmartTxtIndice_3DId; // Index 3
+                    SmartTxtTable[0] = SmartTxtIndice_OPId; // Index 0
+
+                    SetSmartTxtParameter(documentCourantId, SmartTxtTable, OPOriginal);
+                }
+            }
             //TSH.Disconnect();
             //Environment.Exit(0);
         }
@@ -994,6 +1106,7 @@ namespace iFixInvalidity
             {
                 TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
 
+                string nom_docuTxt = "Nom_docu";
                 string CommentaireTxt = "Commentaire";
                 string DesignationTxt = "Designation";
                 string Indice_3DTxt = "Indice 3D";
@@ -1046,6 +1159,32 @@ namespace iFixInvalidity
                     }
 
                 }
+
+                bool iselectrode = Iselectrode(documentCourantId);
+
+                //cherche un element appelé Commentaire
+                ElementId CommentaireExiste = TSH.Elements.SearchByName(documentCourantId, CommentaireTxt);
+                ElementId Nom_docuExiste = TSH.Elements.SearchByName(documentCourantId, nom_docuTxt);
+
+                if (CommentaireExiste == ElementId.Empty || Nom_docuExiste == ElementId.Empty)
+                {
+                    //Creation parametre smart texte puis renommage en Commentaire
+                    ElementId CommentaireParam = TSH.Parameters.CreateSmartTextParameter(documentCourantId, new SmartText(""));
+                    if (iselectrode)
+                    {
+                        TSH.Elements.SetName(CommentaireParam, nom_docuTxt);
+                    }
+                    else
+                    {
+                        TSH.Elements.SetName(CommentaireParam, CommentaireTxt);
+                    }
+                    CommentaireCreated = true; //bool le commentaire a bien été créé
+                    LogMessage($"Paramètre '{CommentaireTxt}' créé.", System.Drawing.Color.Black);
+                }
+                else
+                {
+                    LogMessage($"Paramètre '{CommentaireTxt}' existe déjà.", System.Drawing.Color.Black);
+                }
                 //cherche un element appelé Indice 3D
                 ElementId Indice_3DExiste = TSH.Elements.SearchByName(documentCourantId, Indice_3DTxt);
                 if (Indice_3DExiste == ElementId.Empty)
@@ -1073,20 +1212,6 @@ namespace iFixInvalidity
                 else
                 {
                     LogMessage($"Paramètre '{DesignationTxt}' existe déjà.", System.Drawing.Color.Black);
-                }
-                //cherche un element appelé Commentaire
-                ElementId CommentaireExiste = TSH.Elements.SearchByName(documentCourantId, CommentaireTxt);
-                if (CommentaireExiste == ElementId.Empty)
-                {
-                    //Creation parametre smart texte puis renommage en Commentaire
-                    ElementId CommentaireParam = TSH.Parameters.CreateSmartTextParameter(documentCourantId, new SmartText(""));
-                    TSH.Elements.SetName(CommentaireParam, CommentaireTxt);
-                    CommentaireCreated = true; //bool le commentaire a bien été créé
-                    LogMessage($"Paramètre '{CommentaireTxt}' créé.", System.Drawing.Color.Black);
-                }
-                else
-                {
-                    LogMessage($"Paramètre '{CommentaireTxt}' existe déjà.", System.Drawing.Color.Black);
                 }
                 //Obtient la liste des publications pour chercher OP 
                 List<ElementId> PublishingListe = TSH.Entities.GetPublishings(documentCourantId);
