@@ -17,6 +17,10 @@ using System.IO;
 using System.Security;
 using System.Security.Cryptography;
 using System.Diagnostics;
+using static System.Net.Mime.MediaTypeNames;
+using TopSolid.Cad.Electrode.Automating;
+using TSEH = TopSolid.Cad.Electrode.Automating.TopSolidElectrodeHost;
+
 
 
 namespace iFixInvalidity
@@ -638,6 +642,7 @@ namespace iFixInvalidity
             return SmartTxtId;
         }
 
+        //Configuration des parametres de derivations
         private void DerivationConfig(DocumentId documentCourantId)
         {
             if (documentCourantId != null) 
@@ -691,7 +696,109 @@ namespace iFixInvalidity
 
         }
 
+        //Recuperation des parametres a reconnecter dans un docu elec
+        private void ParamElecListe(DocumentId documentCourantId)
+        {
+            List<ElementId> operations = TSH.Operations.GetOperations(documentCourantId);
+            List<ElementId> paramElecList = new List<ElementId>();
+            string nomCom = "";
+            string nom = "";
+            string Indice_3DOp = "Paramètre texte (Indice 3D)";
+            string CommentaireOp = "Paramètre texte (Commentaire)";
+            string DesignationOp = "Paramètre texte (Designation)";
 
+            ElementId nomDocu = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeName");
+            ElementId nomElec = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Kernel.TX.Properties.Name");
+            ElementId designationPiece = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeDescription");
+            
+            SmartText nomDocuSmart = CreateSmartTxt(nomDocu);
+            SmartText nomElecSmart = CreateSmartTxt(nomElec);
+            SmartText designationPieceSmart = CreateSmartTxt(designationPiece);
+
+            // Déclarer et initialiser un tableau de SmartText
+            SmartText[] SmartTxtTable = new SmartText[3];
+
+            SmartTxtTable[0] = nomDocuSmart; // Index 0
+            SmartTxtTable[1] = nomElecSmart; // Index 1
+            SmartTxtTable[2] = designationPieceSmart; // Index 2
+           
+
+
+            foreach (ElementId operation in operations) 
+            {
+                ElementId commentSysParam = new ElementId();
+
+                try
+                {
+                   nom = TSH.Elements.GetFriendlyName(operation);
+                   //MessageBox.Show(nom);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Erreur : Impossible de recuperer le nom des parametres electrode " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+
+
+                if (!TopSolidHost.Application.StartModification("My Action", false)) return;
+                try
+                {
+
+                    if (nom == CommentaireOp)
+                    {
+                        TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[0]);
+                    }
+                    if (nom == DesignationOp)
+                    {
+                        TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[2]);
+                    }
+                    //if (nom == Indice_3D)
+                    //{
+
+                    //}
+
+
+                    TopSolidHost.Application.EndModification(true, true);
+                }
+                catch
+                {
+                    // End modification (failure).
+                    TopSolidHost.Application.EndModification(false, false);
+                }
+
+
+                
+            }
+            
+        }
+
+        private void GapPublish(DocumentId documentCourantId)
+        {
+            List<ElementId> electrodes = new List<ElementId>();
+            try
+            {
+                electrodes = TSEH.Electrodes.GetElectrodes(documentCourantId, false);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+
+            foreach (ElementId electrode in electrodes)
+            {
+                List<ElementId> gaps = TSEH.Electrodes.GetElectrodeGaps(electrode);
+
+                    int nbr = 1;
+                foreach (ElementId gap in gaps)
+                {
+                    SmartReal gapSmart = new SmartReal( gap);
+                    ElementId gapPublish = TSH.Parameters.PublishReal(documentCourantId, "Gap" + nbr, gapSmart);
+                        nbr = 1 + 1;
+                }
+
+            }
+
+        }
 
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         // Gestionnaire de clic pour le bouton.-----------------------------------------------------------------------------------------------------------------------------------------
@@ -725,64 +832,77 @@ namespace iFixInvalidity
                 MessageBox.Show($"Une erreur s'est produite : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
-            // Fonction recup docu master
-            var (prepaDocument, docMaster) = RecupDocuMaster(documentCourantId);
+            string ext = Extention(documentCourantId);
 
-            //Configuration parametre de derivation si c'est un document derivé
-            DerivationConfig(documentCourantId);
-
-            if (docMaster != DocumentId.Empty)
+            if (ext != null)
             {
-                string docMasterName = TSH.Documents.GetName(docMaster);
-                LogMessage($"Document maître trouvé : {docMasterName}", System.Drawing.Color.Green);
-                //MessageBox.Show("Document pièce trouvé : " + docMasterName);
+                if (ext == ".TopPrt")
+                {
+                     ParamElecListe(documentCourantId);
+
+                    GapPublish(documentCourantId);
+
+
+
+
+                } 
             }
             else
-            {
-                LogMessage("Aucun document maître trouvé.", System.Drawing.Color.Red);
-                //MessageBox.Show("Aucun document maître trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            {  
+                // Fonction recup docu master
+                var (prepaDocument, docMaster) = RecupDocuMaster(documentCourantId);
+
+                //Configuration parametre de derivation si c'est un document derivé
+                DerivationConfig(documentCourantId);
+
+                if (docMaster != DocumentId.Empty)
+                {
+                    string docMasterName = TSH.Documents.GetName(docMaster);
+                    LogMessage($"Document maître trouvé : {docMasterName}", System.Drawing.Color.Green);
+                    //MessageBox.Show("Document pièce trouvé : " + docMasterName);
+                }
+                else
+                {
+                    LogMessage("Aucun document maître trouvé.", System.Drawing.Color.Red);
+                    //MessageBox.Show("Aucun document maître trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                if (prepaDocument != DocumentId.Empty)
+                {
+                    string docPrepaName = TSH.Documents.GetName(prepaDocument);
+                    LogMessage($"Document de prépa trouvé : {docPrepaName}", System.Drawing.Color.Green);
+                    //MessageBox.Show("Document de prépa trouvé : " + docPrepaName);
+                }
+                else
+                {
+                    LogMessage("Aucun document de prépa trouvé.", System.Drawing.Color.Red);
+                    MessageBox.Show("Aucun document de prépa trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                // Récupération des paramètres de base originaux depuis l'opération d'inclusion
+                // Déclaration des variables pour recevoir les valeurs de retour
+                ElementId indice3D;
+                ElementId commentaireOriginal;
+                ElementId designationOriginal;
+                ElementId OPOriginal;
+
+                // Récupération des paramètres maître
+                ParametreMaster(in docMaster, in prepaDocument, out indice3D, out commentaireOriginal, out designationOriginal , out OPOriginal);
+
+                SmartText SmartTxtCommentaireId = CreateSmartTxt(commentaireOriginal);
+                SmartText SmartTxtDesignationId = CreateSmartTxt(designationOriginal);
+                SmartText SmartTxtIndice_3DId = CreateSmartTxt(indice3D);
+                SmartText SmartTxtIndice_OPId = CreateSmartTxt(OPOriginal);
+
+                // Déclarer et initialiser un tableau de SmartText
+                SmartText[] SmartTxtTable = new SmartText[4];
+
+                SmartTxtTable[1] = SmartTxtCommentaireId; // Index 1
+                SmartTxtTable[2] = SmartTxtDesignationId; // Index 2
+                SmartTxtTable[3] = SmartTxtIndice_3DId; // Index 3
+                SmartTxtTable[0] = SmartTxtIndice_OPId; // Index 0
+
+                SetSmartTxtParameter(documentCourantId, SmartTxtTable, OPOriginal);
             }
-
-            if (prepaDocument != DocumentId.Empty)
-            {
-                string docPrepaName = TSH.Documents.GetName(prepaDocument);
-                LogMessage($"Document de prépa trouvé : {docPrepaName}", System.Drawing.Color.Green);
-                //MessageBox.Show("Document de prépa trouvé : " + docPrepaName);
-            }
-            else
-            {
-                LogMessage("Aucun document de prépa trouvé.", System.Drawing.Color.Red);
-                MessageBox.Show("Aucun document de prépa trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-
-
-            // Récupération des paramètres de base originaux depuis l'opération d'inclusion
-            // Déclaration des variables pour recevoir les valeurs de retour
-            ElementId indice3D;
-            ElementId commentaireOriginal;
-            ElementId designationOriginal;
-            ElementId OPOriginal;
-
-            // Récupération des paramètres maître
-            ParametreMaster(in docMaster, in prepaDocument, out indice3D, out commentaireOriginal, out designationOriginal , out OPOriginal);
-
-            SmartText SmartTxtCommentaireId = CreateSmartTxt(commentaireOriginal);
-            SmartText SmartTxtDesignationId = CreateSmartTxt(designationOriginal);
-            SmartText SmartTxtIndice_3DId = CreateSmartTxt(indice3D);
-            SmartText SmartTxtIndice_OPId = CreateSmartTxt(OPOriginal);
-
-            // Déclarer et initialiser un tableau de SmartText
-            SmartText[] SmartTxtTable = new SmartText[4];
-
             
-
-            SmartTxtTable[1] = SmartTxtCommentaireId; // Index 1
-            SmartTxtTable[2] = SmartTxtDesignationId; // Index 2
-            SmartTxtTable[3] = SmartTxtIndice_3DId; // Index 3
-            SmartTxtTable[0] = SmartTxtIndice_OPId; // Index 0
-
-            SetSmartTxtParameter(documentCourantId, SmartTxtTable, OPOriginal);
-
             //TSH.Disconnect();
             //Environment.Exit(0);
         }
@@ -805,20 +925,51 @@ namespace iFixInvalidity
         //Fonction qui recupere extention du document
         private string Extention (DocumentId documentCourantId)
         {
-            // Récupération du PdmObjectId associé
-            PdmObjectId pdmObjectId = TSH.Documents.GetPdmObject(documentCourantId);
+            PdmObjectId pdmObjectId = new PdmObjectId();
+            string DocumentExt = "";
+            try
+            {
+                // Récupération du PdmObjectId associé
+                pdmObjectId = TSH.Documents.GetPdmObject(documentCourantId);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Erreur lors de la récuperation du document courant " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            try
+            {
+                // Récupération de l'extension du document
+                TSH.Pdm.GetType(pdmObjectId, out DocumentExt);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+                return DocumentExt;
+            
+        }
 
-            // Récupération de l'extension du document
-            TSH.Pdm.GetType(pdmObjectId, out string DocumentExt);
-            return DocumentExt;
+        //Fonction qui recupere l'etape prepa d'un document d'assemblage electrode
+        private ElementId PrepaElectrodeStage(DocumentId documentCourantId)
+        {
+            List<ElementId> stages = TSH.Operations.GetStages(documentCourantId);
+
+            foreach (ElementId stage in stages)
+            {
+                string nomStage = TSH.Elements.GetName(stage);
+                //MessageBox.Show(nomStage);
+                if (nomStage == "$TopSolid.Cad.Electrode.DB.Documents.ElementName.PreparationStage")
+                {
+                    return stage;
+                }
+            }            
+            return ElementId.Empty;
         }
 
         //Bouton build ---------------------------------------------------------------------------------------------------------
         private void button2_Click(object sender, EventArgs e)
         {
             DocumentId documentCourantId = DocumentCourant();
-
-
 
             // Vérification de documentCourantId
             if (documentCourantId == null || documentCourantId == DocumentId.Empty)
@@ -827,6 +978,8 @@ namespace iFixInvalidity
                 MessageBox.Show("Erreur : Le document courant est invalide ou vide.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+
+            string ext = Extention(documentCourantId);
 
             //Configuration parametre de derivation si c'est un document derivé
             DerivationConfig(documentCourantId);
@@ -837,8 +990,6 @@ namespace iFixInvalidity
                 MessageBox.Show("Erreur : Impossible de démarrer la modification.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-            
-
             try
             {
                 TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
@@ -854,26 +1005,47 @@ namespace iFixInvalidity
                 bool OPIdCreated = false;
                 ElementId ModelingStage = new ElementId();
 
-                //Recup etape modelisation
-                try
+                if (ext != null)
                 {
-                 ModelingStage = TSH.Operations.GetModelingStage(documentCourantId);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Erreur : La recuperation de l'étape modélisation a échoué" + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                    ElementId prepaElectrodeStage = new ElementId();
 
-                //passe à l'etape modelisation
-                try
-                {
-                 TSH.Operations.SetWorkingStage(ModelingStage);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Erreur : L'activation de l'étape modélisation a échoué" + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                    if (ext == ".TopEld")
+                    {
+                        prepaElectrodeStage = PrepaElectrodeStage(documentCourantId);
 
+                        try
+                        {
+                            TSH.Operations.SetWorkingStage(prepaElectrodeStage);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Erreur : L'activation de l'étape préapartion du document d'assemblage électrode a échoué" + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                    else
+                    {
+                        //Recup etape modelisation
+                        try
+                        {
+                            ModelingStage = TSH.Operations.GetModelingStage(documentCourantId);
+                            //ModelingStage = TSH.Operations.GetDefinitionStage(documentCourantId);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Erreur : La recuperation de l'étape modélisation a échoué" + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                        //passe à l'etape modelisation
+                        try
+                        {
+                         TSH.Operations.SetWorkingStage(ModelingStage);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Erreur : L'activation de l'étape modélisation a échoué" + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+
+                }
                 //cherche un element appelé Indice 3D
                 ElementId Indice_3DExiste = TSH.Elements.SearchByName(documentCourantId, Indice_3DTxt);
                 if (Indice_3DExiste == ElementId.Empty)
@@ -1089,14 +1261,42 @@ namespace iFixInvalidity
 
         private void RestartApplication()
         {
-            // Obtenir le chemin de l'exécutable actuel
-            string applicationPath = Application.ExecutablePath;
+            // Déclaration variable docu courant
+            DocumentId documentCourantId = new DocumentId();
 
-            // Démarrer une nouvelle instance de l'application
-            Process.Start(applicationPath);
+            // Récupération docu courant
+            try
+            {
+                documentCourantId = DocumentCourant();
+                if (documentCourantId != DocumentId.Empty)
+                {
+                    string nomDocumentCourant = NomDocumentCourant(documentCourantId);
+                    LogMessage($"Document courant : {nomDocumentCourant}", System.Drawing.Color.Green);
+                    //MessageBox.Show($"Document courant : {nomDocumentCourant}", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    LogMessage("Aucun document courant trouvé.", System.Drawing.Color.Red);
+                    //MessageBox.Show("Aucun document courant trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Une erreur s'est produite : {ex.Message}", System.Drawing.Color.Red);
+                MessageBox.Show($"Une erreur s'est produite : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
 
-            // Fermer l'application actuelle
-            Application.Exit();
+            DisplayDocumentName();
+            DisplayMasterDocumentName();
+
+            //// Obtenir le chemin de l'exécutable actuel
+            //string applicationPath = Application.ExecutablePath;
+
+            //// Démarrer une nouvelle instance de l'application
+            //Process.Start(applicationPath);
+
+            //// Fermer l'application actuelle
+            //Application.Exit();
         }
 
         //Bouton invok
