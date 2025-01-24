@@ -429,7 +429,6 @@ namespace iFixInvalidity
 
             try
             {
-                TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
 
                 // Recherche des paramètres publiés dans le document courant
                 List<ElementId> ParameterPubliéList = TSH.Parameters.GetParameters(documentCourantId);
@@ -593,6 +592,7 @@ namespace iFixInvalidity
             }
             finally
             {
+                TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
                 TopSolidHost.Application.EndModification(true, true);
             }
         }
@@ -686,11 +686,12 @@ namespace iFixInvalidity
                                 false,//bool inSets,
                                 true//bool inCameras
                             );
-
+                            TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
                             TopSolidHost.Application.EndModification(true, true);
                         }
                         catch(Exception ex)
                         {
+                            TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
                             MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             TopSolidHost.Application.EndModification(false, false);
                         }
@@ -714,13 +715,13 @@ namespace iFixInvalidity
             ElementId nomDocu = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeName");
             ElementId nomElec = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Kernel.TX.Properties.Name");
             ElementId designationPiece = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeDescription");
-            //ElementId indice3DElec = TSH.Elements.SearchByName(documentCourantId, "Indice_Elec");
+            ElementId indice3DElec = TSH.Elements.SearchByName(documentCourantId, "Indice elec");
 
 
             SmartText nomDocuSmart = CreateSmartTxt(nomDocu);
             SmartText nomElecSmart = CreateSmartTxt(nomElec);
             SmartText designationPieceSmart = CreateSmartTxt(designationPiece);
-            //SmartText indice3DElecSmart = CreateSmartTxt(indice3DElec);
+            SmartText indice3DElecSmart = CreateSmartTxt(indice3DElec);
 
 
             // Déclarer et initialiser un tableau de SmartText
@@ -729,7 +730,7 @@ namespace iFixInvalidity
             SmartTxtTable[0] = nomDocuSmart; // Index 0
             SmartTxtTable[1] = nomElecSmart; // Index 1
             SmartTxtTable[2] = designationPieceSmart; // Index 2
-            //SmartTxtTable[3] = indice3DElecSmart; // Index 3
+            SmartTxtTable[3] = indice3DElecSmart; // Index 3
 
 
             foreach (ElementId operation in operations) 
@@ -752,11 +753,10 @@ namespace iFixInvalidity
                 {
                     TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[2]);
                 }
-                //if (nom == Indice_3DOp)
-                //{
-                //    TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[3]);
-
-                //}
+                if (nom == Indice_3DOp)
+                {
+                    TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[3]);
+                }
 
             }
             
@@ -788,9 +788,9 @@ namespace iFixInvalidity
             string GapFini = "Gap Fini";
 
             //Declaration de nom des parametre a publier
-            string GapEbExisteTxt = "Ebauche";
-            string GapDemiFiniExisteTxt = "Demi-finition";
-            string GapFiniExisteTxt = "Finition";
+            string GapEbExisteTxt = "00-Gap Eb";
+            string GapDemiFiniExisteTxt = "01-Gap Demi fini";
+            string GapFiniExisteTxt = "02-Gap Fini";
 
             //Recherche des parametre a publier
             ElementId GapEbId = SearchParamByName(documentCourantId, GapEbExisteTxt);
@@ -843,7 +843,7 @@ namespace iFixInvalidity
         //Cherche un parametre par son nom dans un document
         private ElementId SearchParamByName(DocumentId documentCourantId, string nomParam)
         {
-            if(documentCourantId != null)
+            if (documentCourantId != null)
             {
                 List<ElementId> listeParam = new List<ElementId>();
                 try
@@ -852,8 +852,10 @@ namespace iFixInvalidity
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Erreur : Impossible de recuperer la liste des paramétres " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Erreur : Impossible de récupérer la liste des paramètres " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return ElementId.Empty;
                 }
+
                 if (listeParam.Count > 0)
                 {
                     foreach (ElementId param in listeParam)
@@ -866,19 +868,19 @@ namespace iFixInvalidity
                         catch (Exception ex)
                         {
                             MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            continue;
                         }
-                        if (paramName != string.Empty || paramName != null )
+
+                        if (!string.IsNullOrEmpty(paramName) && paramName.StartsWith(nomParam, StringComparison.OrdinalIgnoreCase))
                         {
-                            if (paramName == nomParam)
-                            {
-                                return param;
-                            }
+                            return param;
                         }
                     }
                 }
             }
-                return ElementId.Empty;
+            return ElementId.Empty;
         }
+
 
         private bool Iselectrode (DocumentId documentCourantId)
         {
@@ -943,15 +945,17 @@ namespace iFixInvalidity
                         if (!TopSolidHost.Application.StartModification("My Action", false)) return;
                         try
                         {
-                            TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
 
                             ParamElecListe(documentCourantId);
                             GapPublish(documentCourantId);
 
+                            TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
                             TopSolidHost.Application.EndModification(true, true);
                         }
                         catch
                         {
+
+                            TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
                             // End modification (failure).
                             TopSolidHost.Application.EndModification(false, false);
                         }
@@ -1312,10 +1316,12 @@ namespace iFixInvalidity
             {
                 LogMessage($"Erreur : {ex.Message}", System.Drawing.Color.Red);
                 MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
                 TopSolidHost.Application.EndModification(false, false);
             }
             finally
             {
+                TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
                 TopSolidHost.Application.EndModification(true, true);
             }
         }
