@@ -30,12 +30,15 @@ namespace iFixInvalidity
     {
         public object TopSolidDesign { get; private set; }
 
+        DocumentId currentDoc = new DocumentId();
+
         public Form1()
         {
             InitializeComponent();
             ConnectToTopSolid(); // Connexion à TopSolid au lancement de l'application
             ConnectToTopSolidDesignHost();
-            DisplayDocumentName();
+            currentDoc = DocumentCourant();
+            DisplayDocumentName(currentDoc);
             DisplayMasterDocumentName();
         }
 
@@ -143,11 +146,11 @@ namespace iFixInvalidity
         }
 
         // Récupère le nom du document courant.
-        private string NomDocumentCourant(DocumentId documentCourantId)
+        private string NomDocumentCourant(DocumentId currentDoc)
         {
             try
             {
-                string nomDocument = TopSolidHost.Documents.GetName(documentCourantId);
+                string nomDocument = TopSolidHost.Documents.GetName(currentDoc);
                 LogMessage($"Nom du document courant récupéré avec succès : {nomDocument}", System.Drawing.Color.Green);
                 return nomDocument;
             }
@@ -165,20 +168,20 @@ namespace iFixInvalidity
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-        private (DocumentId PrepaDocument, DocumentId docMaster) RecupDocuMaster(DocumentId documentCourantId, bool firstPrepaDocumentFound = false)
+        private (DocumentId PrepaDocument, DocumentId docMaster) RecupDocuMaster(DocumentId currentDoc, bool firstPrepaDocumentFound = false)
         {
             DocumentId prepaDocument = DocumentId.Empty;
             DocumentId docMaster = DocumentId.Empty;
-            bool documentDerivé = TSHD.Tools.IsDerived(documentCourantId);
+            bool documentDerivé = TSHD.Tools.IsDerived(currentDoc);
 
             if (!documentDerivé)
             {
-                if (documentCourantId != null && documentCourantId != DocumentId.Empty)
+                if (currentDoc != null && currentDoc != DocumentId.Empty)
                 {
                     try
                     {
                         // Liste les opérations du document
-                        List<ElementId> operationsList = OperationsList(documentCourantId);
+                        List<ElementId> operationsList = OperationsList(currentDoc);
                         if (operationsList.Count != 0)
                         {
                             // Pour chaque élément de la liste
@@ -247,7 +250,7 @@ namespace iFixInvalidity
             {
                 //MessageBox.Show("Le document est un document dérivé.");
 
-                DocumentId docBaseDerivation = TSHD.Tools.GetBaseDocument(documentCourantId);
+                DocumentId docBaseDerivation = TSHD.Tools.GetBaseDocument(currentDoc);
                 var result = RecupDocuMaster(docBaseDerivation, firstPrepaDocumentFound);
                 if (result.docMaster != DocumentId.Empty)
                 {
@@ -263,13 +266,13 @@ namespace iFixInvalidity
 
 
         // Récupère la liste des opérations d'un document
-        private List<ElementId> OperationsList(DocumentId documentCourantId)
+        private List<ElementId> OperationsList(DocumentId currentDoc)
         {
-            if (documentCourantId != null && documentCourantId != DocumentId.Empty)
+            if (currentDoc != null && currentDoc != DocumentId.Empty)
             {
                 try
                 {
-                    List<ElementId> operationsList = TSH.Operations.GetOperations(documentCourantId);
+                    List<ElementId> operationsList = TSH.Operations.GetOperations(currentDoc);
                     LogMessage("Liste des opérations récupérée avec succès.", System.Drawing.Color.Green);
                     return operationsList;
                 }
@@ -415,7 +418,7 @@ namespace iFixInvalidity
             }
         }
 
-        private void SetSmartTxtParameter(DocumentId documentCourantId, SmartText[] SmartTxtTable, ElementId OPOriginal)
+        private void SetSmartTxtParameter(DocumentId currentDoc, SmartText[] SmartTxtTable, ElementId OPOriginal)
         {
             ElementId OPPublishingElement = ElementId.Empty;
 
@@ -429,10 +432,10 @@ namespace iFixInvalidity
 
             try
             {
-                TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
+                TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
 
                 // Recherche des paramètres publiés dans le document courant
-                List<ElementId> ParameterPubliéList = TSH.Parameters.GetParameters(documentCourantId);
+                List<ElementId> ParameterPubliéList = TSH.Parameters.GetParameters(currentDoc);
 
                 string DocumentExt = String.Empty;
                 // Si la liste des paramètres publiés n'est pas vide
@@ -444,7 +447,7 @@ namespace iFixInvalidity
                         // MessageBox.Show(Parametertype);
 
                         // Récupération du PdmObjectId associé
-                        PdmObjectId pdmObjectId = TSH.Documents.GetPdmObject(documentCourantId);
+                        PdmObjectId pdmObjectId = TSH.Documents.GetPdmObject(currentDoc);
 
                         // Récupération de l'extension du document
                         TSH.Pdm.GetType(pdmObjectId, out DocumentExt);
@@ -522,12 +525,12 @@ namespace iFixInvalidity
                             }
                             else if (DocumentExt == ".TopNewPrtSet")
                             {
-                                bool dérivé = TSHD.Tools.IsDerived(documentCourantId);
+                                bool dérivé = TSHD.Tools.IsDerived(currentDoc);
                                 if (dérivé)
                                 {
-                                    ElementId opCourantPrepa = RecupOpCourantPrepa(documentCourantId);
+                                    ElementId opCourantPrepa = RecupOpCourantPrepa(currentDoc);
 
-                                    DocumentId docBase = TSHD.Tools.GetBaseDocument(documentCourantId);
+                                    DocumentId docBase = TSHD.Tools.GetBaseDocument(currentDoc);
                                    List<ElementId> parameters = TSH.Parameters.GetParameters(docBase);
                                     foreach (ElementId parameter in parameters)
                                     {
@@ -597,9 +600,9 @@ namespace iFixInvalidity
             }
         }
 
-        private ElementId RecupOpCourantPrepa(DocumentId documentCourantId)
+        private ElementId RecupOpCourantPrepa(DocumentId currentDoc)
         {
-            List<ElementId> parameters = TSH.Operations.GetOperations(documentCourantId);
+            List<ElementId> parameters = TSH.Operations.GetOperations(currentDoc);
             foreach (ElementId parameter in parameters)
             {
                 string parameterName = TSH.Elements.GetFriendlyName(parameter);
@@ -648,11 +651,11 @@ namespace iFixInvalidity
         }
 
         //Configuration des parametres de derivations
-        private void DerivationConfig(DocumentId documentCourantId)
+        private void DerivationConfig(DocumentId currentDoc)
         {
-            if (documentCourantId != null) 
+            if (currentDoc != null) 
             {
-                bool isDerived = TSHD.Tools.IsDerived(documentCourantId);
+                bool isDerived = TSHD.Tools.IsDerived(currentDoc);
                 if (isDerived)
                 {
                     if (TopSolidHost.Application.StartModification("My Modification", false))
@@ -661,7 +664,7 @@ namespace iFixInvalidity
                         {
                             TSHD.Tools.SetDerivationInheritances
                             (
-                                documentCourantId,//DocumentId inDocumentId
+                                currentDoc,//DocumentId inDocumentId
                                 false,//bool inName, 
                                 false,//bool inDescription,
                                 false,//bool inCode,
@@ -702,18 +705,18 @@ namespace iFixInvalidity
         }
 
         //Recuperation des parametres a reconnecter dans un docu elec
-        private void ParamElecListe(DocumentId documentCourantId)
+        private void ParamElecListe(DocumentId currentDoc)
         {
-            List<ElementId> operations = TSH.Operations.GetOperations(documentCourantId);
+            List<ElementId> operations = TSH.Operations.GetOperations(currentDoc);
             List<ElementId> paramElecList = new List<ElementId>();
             string nom = "";
             string Indice_3DOp = "Paramètre texte (Indice 3D)";
             string CommentaireOp = "Paramètre texte (Nom_docu)";
             string DesignationOp = "Paramètre texte (Designation)";
 
-            ElementId nomDocu = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeName");
-            ElementId nomElec = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Kernel.TX.Properties.Name");
-            ElementId designationPiece = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeDescription");
+            ElementId nomDocu = TSH.Elements.SearchByName(currentDoc, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeName");
+            ElementId nomElec = TSH.Elements.SearchByName(currentDoc, "$TopSolid.Kernel.TX.Properties.Name");
+            ElementId designationPiece = TSH.Elements.SearchByName(currentDoc, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeDescription");
             //ElementId indice3DElec = TSH.Elements.SearchByName(documentCourantId, "Indice_Elec");
 
 
@@ -780,7 +783,7 @@ namespace iFixInvalidity
         }
 
         //Recupere les parametres de Gap et les publie
-        private void GapPublish(DocumentId documentCourantId)
+        private void GapPublish(DocumentId currentDoc)
         {
             //Declaration de nom des parametre apres publication
             string GapEb = "Gap EB";
@@ -793,16 +796,16 @@ namespace iFixInvalidity
             string GapFiniExisteTxt = "Finition";
 
             //Recherche des parametre a publier
-            ElementId GapEbId = SearchParamByName(documentCourantId, GapEbExisteTxt);
-            ElementId GapDemiFiniId = SearchParamByName(documentCourantId, GapDemiFiniExisteTxt);
-            ElementId GapFiniId = SearchParamByName(documentCourantId, GapFiniExisteTxt);
+            ElementId GapEbId = SearchParamByName(currentDoc, GapEbExisteTxt);
+            ElementId GapDemiFiniId = SearchParamByName(currentDoc, GapDemiFiniExisteTxt);
+            ElementId GapFiniId = SearchParamByName(currentDoc, GapFiniExisteTxt);
             //Creation des smart texte pour le publication
             SmartReal gapEbPublie = new SmartReal (ElementId.Empty);
             SmartReal gapDemiFiniPublie = new SmartReal(ElementId.Empty);
             SmartReal gapFiniPublie = new SmartReal(ElementId.Empty);
 
             //Recuperation des parametres deja publié
-            List<ElementId> publishingList = TSH.Entities.GetPublishings(documentCourantId);
+            List<ElementId> publishingList = TSH.Entities.GetPublishings(currentDoc);
 
             //Verification si les parametres sont deja publié
             bool gapEbExist = GapPublishExist( publishingList, GapEb);
@@ -815,7 +818,7 @@ namespace iFixInvalidity
                     if (GapEbId != ElementId.Empty)
                     {
                         gapEbPublie = CreateSmartReal(GapEbId);
-                        ElementId realpublie = TSH.Parameters.PublishReal(documentCourantId, GapEb, gapEbPublie);
+                        ElementId realpublie = TSH.Parameters.PublishReal(currentDoc, GapEb, gapEbPublie);
                         TSH.Elements.SetName(realpublie, GapEb);
                     }
                 }
@@ -824,7 +827,7 @@ namespace iFixInvalidity
                     if (GapDemiFiniId != ElementId.Empty)
                     {
                         gapDemiFiniPublie = CreateSmartReal(GapDemiFiniId);
-                        ElementId realpublie = TSH.Parameters.PublishReal(documentCourantId, GapDemiFini, gapDemiFiniPublie);
+                        ElementId realpublie = TSH.Parameters.PublishReal(currentDoc, GapDemiFini, gapDemiFiniPublie);
                         TSH.Elements.SetName(realpublie, GapDemiFini);
                     }
                 }
@@ -833,7 +836,7 @@ namespace iFixInvalidity
                     if (GapFiniId != ElementId.Empty)
                     {
                         gapFiniPublie = CreateSmartReal(GapFiniId);
-                        ElementId realpublie = TSH.Parameters.PublishReal(documentCourantId, GapFini, gapFiniPublie);
+                        ElementId realpublie = TSH.Parameters.PublishReal(currentDoc, GapFini, gapFiniPublie);
                         TSH.Elements.SetName(realpublie, GapFini);
                     }
                 }
@@ -841,14 +844,14 @@ namespace iFixInvalidity
         }
 
         //Cherche un parametre par son nom dans un document
-        private ElementId SearchParamByName(DocumentId documentCourantId, string nomParam)
+        private ElementId SearchParamByName(DocumentId currentDoc, string nomParam)
         {
-            if(documentCourantId != null)
+            if(currentDoc != null)
             {
                 List<ElementId> listeParam = new List<ElementId>();
                 try
                 {
-                    listeParam = TSH.Parameters.GetParameters(documentCourantId);
+                    listeParam = TSH.Parameters.GetParameters(currentDoc);
                 }
                 catch (Exception ex)
                 {
@@ -880,9 +883,9 @@ namespace iFixInvalidity
                 return ElementId.Empty;
         }
 
-        private bool Iselectrode (DocumentId documentCourantId)
+        private bool Iselectrode (DocumentId currentDoc)
         {
-            List<ElementId> parameterListe = TSH.Parameters.GetParameters (documentCourantId);
+            List<ElementId> parameterListe = TSH.Parameters.GetParameters (currentDoc);
 
             foreach (ElementId param in parameterListe) 
             {
@@ -905,16 +908,11 @@ namespace iFixInvalidity
 
         private void button1_Click_1(object sender, EventArgs e)
         {
-            // Déclaration variable docu courant
-            DocumentId documentCourantId = new DocumentId();
-
-            // Récupération docu courant
             try
             {
-                documentCourantId = DocumentCourant();
-                if (documentCourantId != DocumentId.Empty)
+                if (currentDoc != DocumentId.Empty)
                 {
-                    string nomDocumentCourant = NomDocumentCourant(documentCourantId);
+                    string nomDocumentCourant = NomDocumentCourant(currentDoc);
                     LogMessage($"Document courant : {nomDocumentCourant}", System.Drawing.Color.Green);
                     //MessageBox.Show($"Document courant : {nomDocumentCourant}", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -930,9 +928,9 @@ namespace iFixInvalidity
                 MessageBox.Show($"Une erreur s'est produite : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
-            string ext = Extention(documentCourantId);
+            string ext = Extention(currentDoc);
 
-            bool iselectrode = Iselectrode(documentCourantId);
+            bool iselectrode = Iselectrode(currentDoc);
 
             if (ext != null)
             {
@@ -943,10 +941,10 @@ namespace iFixInvalidity
                         if (!TopSolidHost.Application.StartModification("My Action", false)) return;
                         try
                         {
-                            TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
+                            TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
 
-                            ParamElecListe(documentCourantId);
-                            GapPublish(documentCourantId);
+                            ParamElecListe(currentDoc);
+                            GapPublish(currentDoc);
 
                             TopSolidHost.Application.EndModification(true, true);
                         }
@@ -962,10 +960,10 @@ namespace iFixInvalidity
                 else
                 {
                     // Fonction recup docu master
-                    var (prepaDocument, docMaster) = RecupDocuMaster(documentCourantId);
+                    var (prepaDocument, docMaster) = RecupDocuMaster(currentDoc);
 
                     //Configuration parametre de derivation si c'est un document derivé
-                    DerivationConfig(documentCourantId);
+                    DerivationConfig(currentDoc);
 
                     if (docMaster != DocumentId.Empty)
                     {
@@ -1012,7 +1010,7 @@ namespace iFixInvalidity
                     SmartTxtTable[3] = SmartTxtIndice_3DId; // Index 3
                     SmartTxtTable[0] = SmartTxtIndice_OPId; // Index 0
 
-                    SetSmartTxtParameter(documentCourantId, SmartTxtTable, OPOriginal);
+                    SetSmartTxtParameter(currentDoc, SmartTxtTable, OPOriginal);
                 }
             }
             //TSH.Disconnect();
@@ -1035,14 +1033,14 @@ namespace iFixInvalidity
         }
 
         //Fonction qui recupere extention du document
-        private string Extention (DocumentId documentCourantId)
+        private string Extention (DocumentId currentDoc)
         {
             PdmObjectId pdmObjectId = new PdmObjectId();
             string DocumentExt = "";
             try
             {
                 // Récupération du PdmObjectId associé
-                pdmObjectId = TSH.Documents.GetPdmObject(documentCourantId);
+                pdmObjectId = TSH.Documents.GetPdmObject(currentDoc);
             }
             catch (Exception ex)
             {
@@ -1062,9 +1060,9 @@ namespace iFixInvalidity
         }
 
         //Fonction qui recupere l'etape prepa d'un document d'assemblage electrode
-        private ElementId PrepaElectrodeStage(DocumentId documentCourantId)
+        private ElementId PrepaElectrodeStage(DocumentId currentDoc)
         {
-            List<ElementId> stages = TSH.Operations.GetStages(documentCourantId);
+            List<ElementId> stages = TSH.Operations.GetStages(currentDoc);
 
             foreach (ElementId stage in stages)
             {
@@ -1081,20 +1079,19 @@ namespace iFixInvalidity
         //Bouton build ---------------------------------------------------------------------------------------------------------
         private void button2_Click(object sender, EventArgs e)
         {
-            DocumentId documentCourantId = DocumentCourant();
 
             // Vérification de documentCourantId
-            if (documentCourantId == null || documentCourantId == DocumentId.Empty)
+            if (currentDoc == null || currentDoc == DocumentId.Empty)
             {
                 LogMessage("Erreur : Le document courant est invalide ou vide.", System.Drawing.Color.Red);
                 MessageBox.Show("Erreur : Le document courant est invalide ou vide.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            string ext = Extention(documentCourantId);
+            string ext = Extention(currentDoc);
 
             //Configuration parametre de derivation si c'est un document derivé
-            DerivationConfig(documentCourantId);
+            DerivationConfig(currentDoc);
 
             if (!TopSolidHost.Application.StartModification("My Action", false))
             {
@@ -1104,7 +1101,7 @@ namespace iFixInvalidity
             }
             try
             {
-                TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
+                TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
 
                 string nom_docuTxt = "Nom_docu";
                 string CommentaireTxt = "Commentaire";
@@ -1124,7 +1121,7 @@ namespace iFixInvalidity
 
                     if (ext == ".TopEld")
                     {
-                        prepaElectrodeStage = PrepaElectrodeStage(documentCourantId);
+                        prepaElectrodeStage = PrepaElectrodeStage(currentDoc);
 
                         try
                         {
@@ -1140,7 +1137,7 @@ namespace iFixInvalidity
                         //Recup etape modelisation
                         try
                         {
-                            ModelingStage = TSH.Operations.GetModelingStage(documentCourantId);
+                            ModelingStage = TSH.Operations.GetModelingStage(currentDoc);
                             //ModelingStage = TSH.Operations.GetDefinitionStage(documentCourantId);
                         }
                         catch (Exception ex)
@@ -1160,16 +1157,16 @@ namespace iFixInvalidity
 
                 }
 
-                bool iselectrode = Iselectrode(documentCourantId);
+                bool iselectrode = Iselectrode(currentDoc);
 
                 //cherche un element appelé Commentaire
-                ElementId CommentaireExiste = TSH.Elements.SearchByName(documentCourantId, CommentaireTxt);
-                ElementId Nom_docuExiste = TSH.Elements.SearchByName(documentCourantId, nom_docuTxt);
+                ElementId CommentaireExiste = TSH.Elements.SearchByName(currentDoc, CommentaireTxt);
+                ElementId Nom_docuExiste = TSH.Elements.SearchByName(currentDoc, nom_docuTxt);
 
                 if (CommentaireExiste == ElementId.Empty || Nom_docuExiste == ElementId.Empty)
                 {
                     //Creation parametre smart texte puis renommage en Commentaire
-                    ElementId CommentaireParam = TSH.Parameters.CreateSmartTextParameter(documentCourantId, new SmartText(""));
+                    ElementId CommentaireParam = TSH.Parameters.CreateSmartTextParameter(currentDoc, new SmartText(""));
                     if (iselectrode)
                     {
                         TSH.Elements.SetName(CommentaireParam, nom_docuTxt);
@@ -1186,11 +1183,11 @@ namespace iFixInvalidity
                     LogMessage($"Paramètre '{CommentaireTxt}' existe déjà.", System.Drawing.Color.Black);
                 }
                 //cherche un element appelé Indice 3D
-                ElementId Indice_3DExiste = TSH.Elements.SearchByName(documentCourantId, Indice_3DTxt);
+                ElementId Indice_3DExiste = TSH.Elements.SearchByName(currentDoc, Indice_3DTxt);
                 if (Indice_3DExiste == ElementId.Empty)
                 {
                     //Creation parametre smart texte puis renommange en Indice 3D
-                    ElementId Indice_3DParam = TSH.Parameters.CreateSmartTextParameter(documentCourantId, new SmartText(""));
+                    ElementId Indice_3DParam = TSH.Parameters.CreateSmartTextParameter(currentDoc, new SmartText(""));
                     TSH.Elements.SetName(Indice_3DParam, Indice_3DTxt);
                     Indice_3DCreated = true;
                     LogMessage($"Paramètre '{Indice_3DTxt}' créé.", System.Drawing.Color.Green);
@@ -1200,11 +1197,11 @@ namespace iFixInvalidity
                     LogMessage($"Paramètre '{Indice_3DTxt}' existe déjà.", System.Drawing.Color.Black);
                 }
                 //cherche un element appelé Designation
-                ElementId DesignationExiste = TSH.Elements.SearchByName(documentCourantId, DesignationTxt);
+                ElementId DesignationExiste = TSH.Elements.SearchByName(currentDoc, DesignationTxt);
                 if (DesignationExiste == ElementId.Empty)
                 {
                     //Creation parametre smart texte puis renommage en Designation
-                    ElementId DesignationParam = TSH.Parameters.CreateSmartTextParameter(documentCourantId, new SmartText(""));
+                    ElementId DesignationParam = TSH.Parameters.CreateSmartTextParameter(currentDoc, new SmartText(""));
                     TSH.Elements.SetName(DesignationParam, DesignationTxt);
                     DesignationCreated = true; //bool le Designation a bien été créé
                     LogMessage($"Paramètre '{DesignationTxt}' créé.", System.Drawing.Color.Black);
@@ -1214,7 +1211,7 @@ namespace iFixInvalidity
                     LogMessage($"Paramètre '{DesignationTxt}' existe déjà.", System.Drawing.Color.Black);
                 }
                 //Obtient la liste des publications pour chercher OP 
-                List<ElementId> PublishingListe = TSH.Entities.GetPublishings(documentCourantId);
+                List<ElementId> PublishingListe = TSH.Entities.GetPublishings(currentDoc);
                 if (PublishingListe != null)
                 {
                     bool OPIdExisteOui = false; //Initialisation bool existe
@@ -1233,7 +1230,7 @@ namespace iFixInvalidity
                     if (OPIdExisteOui != true)
                     {
                         //Recupere extention du document
-                        string DocumentExt = Extention(documentCourantId);
+                        string DocumentExt = Extention(currentDoc);
 
                         //
 
@@ -1241,11 +1238,11 @@ namespace iFixInvalidity
                         {
                             if (DocumentExt == ".TopNewPrtSet")
                             {
-                                bool derivé = TSHD.Tools.IsDerived(documentCourantId);
+                                bool derivé = TSHD.Tools.IsDerived(currentDoc);
                                 if (derivé)
                                 {
                                     //Creation parametre smart texte puis renommage en OP
-                                    ElementId OPParam = TSH.Parameters.CreateSmartTextParameter(documentCourantId, new SmartText(""));
+                                    ElementId OPParam = TSH.Parameters.CreateSmartTextParameter(currentDoc, new SmartText(""));
                                     TSH.Elements.SetName(OPParam, OPIdTxt);
                                     OPIdCreated = true; //bool le commentaire a bien été créé
                                     LogMessage($"Paramètre '{OPIdTxt}' créé.", System.Drawing.Color.Black);
@@ -1253,7 +1250,7 @@ namespace iFixInvalidity
                                 }
                                 else 
                                 { 
-                                    ElementId OPParam = TSH.Parameters.PublishText(documentCourantId, OPIdTxt, new SmartText("1"));
+                                    ElementId OPParam = TSH.Parameters.PublishText(currentDoc, OPIdTxt, new SmartText("1"));
                                     TSH.Elements.SetName(OPParam, OPIdTxt);
                                     OPIdCreated = true;
                                     LogMessage($"Paramètre '{OPIdTxt}' créé.", System.Drawing.Color.Black);
@@ -1262,11 +1259,11 @@ namespace iFixInvalidity
                             }
                             if (DocumentExt == ".TopMillTurn")
                             {
-                                ElementId OPExiste = TSH.Elements.SearchByName(documentCourantId, OPIdTxt);
+                                ElementId OPExiste = TSH.Elements.SearchByName(currentDoc, OPIdTxt);
                                 if (OPExiste == ElementId.Empty)
                                 {
                                     //Creation parametre smart texte puis renommage en OP
-                                    ElementId OPParam = TSH.Parameters.CreateSmartTextParameter(documentCourantId, new SmartText(""));
+                                    ElementId OPParam = TSH.Parameters.CreateSmartTextParameter(currentDoc, new SmartText(""));
                                     TSH.Elements.SetName(OPParam, OPIdTxt);
                                     OPIdCreated = true; //bool le commentaire a bien été créé
                                     LogMessage($"Paramètre '{OPIdTxt}' créé.", System.Drawing.Color.Black);
@@ -1321,13 +1318,10 @@ namespace iFixInvalidity
         }
 
         //fonction pour afficher le nom du document courant
-        private DocumentId DisplayDocumentName()
+        private void DisplayDocumentName(DocumentId currentDocId)
         {
-            DocumentId documentCourantId = DocumentCourant();
-           string documentCourantName = NomDocumentCourant(documentCourantId);
-          
-            labelDocumentName.Text = documentCourantName;
-            return documentCourantId;
+           string documentCourantName = NomDocumentCourant(currentDocId);
+           labelDocumentName.Text = documentCourantName;
         }
 
         //fonction pour afficher le nom du document maitre
@@ -1387,15 +1381,15 @@ namespace iFixInvalidity
         private void RestartApplication()
         {
             // Déclaration variable docu courant
-            DocumentId documentCourantId = new DocumentId();
+            //DocumentId currentDoc = new DocumentId();
 
             // Récupération docu courant
             try
             {
-                documentCourantId = DocumentCourant();
-                if (documentCourantId != DocumentId.Empty)
+                currentDoc = DocumentCourant();
+                if (currentDoc != DocumentId.Empty)
                 {
-                    string nomDocumentCourant = NomDocumentCourant(documentCourantId);
+                    string nomDocumentCourant = NomDocumentCourant(currentDoc);
                     LogMessage($"Document courant : {nomDocumentCourant}", System.Drawing.Color.Green);
                     //MessageBox.Show($"Document courant : {nomDocumentCourant}", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -1411,7 +1405,7 @@ namespace iFixInvalidity
                 MessageBox.Show($"Une erreur s'est produite : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
-            DisplayDocumentName();
+            DisplayDocumentName(currentDoc);
             DisplayMasterDocumentName();
 
             //// Obtenir le chemin de l'exécutable actuel
@@ -1427,28 +1421,50 @@ namespace iFixInvalidity
         //Bouton invok
         private void button3_Click(object sender, EventArgs e)
         {
+            List<ElementId> piecesEnInsertion = PiecesEnInsertionId(currentDoc);
+
+            if (!TopSolidHost.Application.StartModification("My Action", false)) return;
             try
             {
-                //// Lancer la commande
-                //// Créer une instance de UserQuestion
-                //var userQuestion = new UserQuestion
-                //{
-                //    AcceptsAuto = true // Activer la réponse automatique
-                //};
-                UserQuestion userQuestion = new UserQuestion();
-                bool okAuto = true;
-                okAuto = userQuestion.AcceptsAuto;
-                TSH.Application.InvokeCommand("TopSolid.Cad.Design.UI.Publishings.PublishingsInheritingCommand");
 
-                //// Réinitialiser AcceptsAuto après l'exécution si nécessaire
-                //userQuestion.AcceptsAuto = false;
+                foreach (ElementId piece in piecesEnInsertion)
+                {
+                    TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
+                    string name = TSH.Elements.GetFriendlyName(piece);
+                    MessageBox.Show(name);
+                    EntityCopyNameMode entityCopyNameMode = 0; ;
+                    TSHD.Tools.InheritDetailingsElements(piece, entityCopyNameMode,"");
+                }
+
+                TopSolidHost.Application.EndModification(true, true);
             }
-            catch (Exception ex)
+            catch
             {
-                // Gérer les exceptions
-                MessageBox.Show("Erreur lors de l'exécution de la commande : " + ex.Message);
+                // End modification (failure).
+                TopSolidHost.Application.EndModification(false, false);
             }
+
         }
+
+        private List<ElementId> PiecesEnInsertionId(DocumentId currentDoc)
+        {
+           List<ElementId> operationIds = TSH.Operations.GetOperations(currentDoc);
+           List<ElementId> childrens = new List<ElementId>();
+           List<ElementId> piecesEnInsertion = new List<ElementId>();
+            
+            foreach (ElementId operationId in operationIds)
+            {
+                bool isInclusion = TSHD.Assemblies.IsInclusion(operationId);
+             
+                if(isInclusion)
+                {
+                    childrens = TSH.Operations.GetChildren(operationId);
+                    piecesEnInsertion.AddRange(childrens);
+                }
+            }                   return piecesEnInsertion;
+        }
+
+        
     }
 
     internal class Elementid
