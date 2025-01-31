@@ -596,7 +596,7 @@ namespace iFixInvalidity
             }
             finally
             {
-                TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
+                TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
                 TopSolidHost.Application.EndModification(true, true);
             }
         }
@@ -690,12 +690,12 @@ namespace iFixInvalidity
                                 false,//bool inSets,
                                 true//bool inCameras
                             );
-                            TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
+                            TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
                             TopSolidHost.Application.EndModification(true, true);
                         }
                         catch(Exception ex)
                         {
-                            TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
+                            TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
                             MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             TopSolidHost.Application.EndModification(false, false);
                         }
@@ -716,10 +716,10 @@ namespace iFixInvalidity
             string CommentaireOp = "Paramètre texte (Nom_docu)";
             string DesignationOp = "Paramètre texte (Designation)";
 
-            ElementId nomDocu = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeName");
-            ElementId nomElec = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Kernel.TX.Properties.Name");
-            ElementId designationPiece = TSH.Elements.SearchByName(documentCourantId, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeDescription");
-            ElementId indice3DElec = TSH.Elements.SearchByName(documentCourantId, "Indice elec");
+            ElementId nomDocu = TSH.Elements.SearchByName(currentDoc, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeName");
+            ElementId nomElec = TSH.Elements.SearchByName(currentDoc, "$TopSolid.Kernel.TX.Properties.Name");
+            ElementId designationPiece = TSH.Elements.SearchByName(currentDoc, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeDescription");
+            ElementId indice3DElec = TSH.Elements.SearchByName(currentDoc, "Indice elec");
 
 
             SmartText nomDocuSmart = CreateSmartTxt(nomDocu);
@@ -953,7 +953,7 @@ namespace iFixInvalidity
                         catch
                         {
 
-                            TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
+                            TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
                             // End modification (failure).
                             TopSolidHost.Application.EndModification(false, false);
                         }
@@ -1313,12 +1313,12 @@ namespace iFixInvalidity
             {
                 LogMessage($"Erreur : {ex.Message}", System.Drawing.Color.Red);
                 MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
+                TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
                 TopSolidHost.Application.EndModification(false, false);
             }
             finally
             {
-                TopSolidHost.Documents.EnsureIsDirty(ref documentCourantId);
+                TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
                 TopSolidHost.Application.EndModification(true, true);
             }
         }
