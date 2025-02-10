@@ -22,12 +22,22 @@ using static System.Net.Mime.MediaTypeNames;
 using TopSolid.Cad.Electrode.Automating;
 using TSEH = TopSolid.Cad.Electrode.Automating.TopSolidElectrodeHost;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
+using System.Net.Sockets;
+
 
 
 namespace iFixInvalidity
 {
     internal class Document
     {
+        private Form1 formInstance;
+
+        // Constructeur qui accepte une instance de Form1
+        public Document(Form1 form)
+        {
+            formInstance = form;
+        }
+
         // Identifiant du document
         private DocumentId docId;
 
@@ -146,14 +156,16 @@ namespace iFixInvalidity
 
                 try
                 {
+                    
                     // Vérification si le document est une électrode
-                    docIsElectrode = TSEH.Electrodes.IsElectrodes(docId);
+                    docIsElectrode = formInstance.Iselectrode(docId);
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Erreur lors de la vérification si le document est une électrode : {ex.Message}");
                     docIsElectrode = false; // Valeur par défaut en cas d'erreur
                 }
+                
             }
         }
 
@@ -213,6 +225,6 @@ namespace iFixInvalidity
         public Document()
         {
             // Constructeur par défaut
-        }
+        } 
     }
 }
