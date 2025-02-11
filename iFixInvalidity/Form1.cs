@@ -362,6 +362,7 @@ namespace iFixInvalidity
             {
                 string nomDocPrepa = TSH.Documents.GetName(PrepaDocument);
                 MessageBox.Show(nomDocPrepa);
+                prepaTrouvé = true;
             }
 
             // Initialisation des paramètres out avec des valeurs par défaut
@@ -604,6 +605,22 @@ namespace iFixInvalidity
                                         throw; // Relancer l'exception pour s'assurer que le bloc finally est exécuté
                                     }
                                 }
+                                // Mise à jour du paramètre "Commentaire"
+                                if (ParameterPubliéName == Nomdocu)
+                                {
+                                    ElementId ParameterPubliéOp = TSH.Elements.GetParent(ParameterPublié);
+                                    try
+                                    {
+                                        TSH.Parameters.SetSmartTextParameterCreation(ParameterPubliéOp, SmartTxtTable[5]);
+                                        NomDocuSet = true; // Marquer la méthode comme exécutée
+                                        LogMessage($"Paramètre '{Nomdocu}' mis à jour.", System.Drawing.Color.Green);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        LogMessage($"Erreur : lors de la mise à jour du paramètre 'Commentaire' : {ex.Message}", System.Drawing.Color.Red);
+                                        throw; // Relancer l'exception pour s'assurer que le bloc finally est exécuté
+                                    }
+                                }
                             }
                             // Traitement spécifique pour l'extension .TopNewPrtSet
                             else if (DocumentExt == ".TopNewPrtSet")
@@ -635,7 +652,6 @@ namespace iFixInvalidity
                                         }
                                     }
                                 }
-
                                 // Mise à jour du paramètre "Nom elec"
                                 if (ParameterPubliéName == nomElec)
                                 {

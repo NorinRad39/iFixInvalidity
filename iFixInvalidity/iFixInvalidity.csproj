@@ -59,6 +59,12 @@
     <Reference Include="TopSolid.Kernel.Automating">
       <HintPath>..\..\..\..\..\..\..\Program Files\TOPSOLID\TopSolid 7.17\bin\TopSolid.Kernel.Automating.dll</HintPath>
     </Reference>
+    <Reference Include="TopSolid.Kernel.SX">
+      <HintPath>..\..\..\..\..\..\..\Program Files\TOPSOLID\TopSolid 7.18\bin\TopSolid.Kernel.SX.dll</HintPath>
+    </Reference>
+    <Reference Include="TopSolid.Kernel.SX.NetStandard">
+      <HintPath>..\..\..\..\..\..\..\Program Files\TOPSOLID\TopSolid 7.18\bin\TopSolid.Kernel.SX.NetStandard.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Form1.cs">
