@@ -30,12 +30,12 @@ namespace iFixInvalidity
 {
     internal class Document
     {
-        private Form1 formInstance;
+        private Form1 form1;
 
         // Constructeur qui accepte une instance de Form1
         public Document(Form1 form)
         {
-            formInstance = form;
+            form1 = form;
         }
 
         // Identifiant du document
@@ -155,17 +155,25 @@ namespace iFixInvalidity
                 }
 
                 try
-                {
-                    
+                { 
                     // Vérification si le document est une électrode
-                    docIsElectrode = formInstance.Iselectrode(docId);
+                    docIsElectrode = form1.Iselectrode(docId);
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Erreur lors de la vérification si le document est une électrode : {ex.Message}");
                     docIsElectrode = false; // Valeur par défaut en cas d'erreur
                 }
-                
+
+                try
+                {
+                    docExtention = form1.Extention(docId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erreur lors de la vérification si le document est une électrode : {ex.Message}");
+                    docExtention = null; // Valeur par défaut en cas d'erreur
+                }
             }
         }
 

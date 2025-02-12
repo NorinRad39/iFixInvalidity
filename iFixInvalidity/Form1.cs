@@ -33,6 +33,7 @@ namespace iFixInvalidity
 
             Document currentDoc;
         DocumentId docMaster = DocumentId.Empty;
+        DocumentId prepaDocument = DocumentId.Empty;
 
         public Form1()
         {
@@ -47,6 +48,8 @@ namespace iFixInvalidity
             currentDoc.DocId = DocumentCourant();
             DisplayDocumentName(currentDoc.DocNomTxt);
             DisplayMasterDocumentName();
+            // Récupération du document maître et du document de préparation
+            (prepaDocument, docMaster) = RecupDocuMaster(currentDoc.DocId);
         }
 
         bool prepaTrouvé = false;
@@ -618,6 +621,22 @@ namespace iFixInvalidity
                                     catch (Exception ex)
                                     {
                                         LogMessage($"Erreur : lors de la mise à jour du paramètre 'Commentaire' : {ex.Message}", System.Drawing.Color.Red);
+                                        throw; // Relancer l'exception pour s'assurer que le bloc finally est exécuté
+                                    }
+                                }
+                                // Mise à jour du paramètre "Nom elec"
+                                if (ParameterPubliéName == nomElec)
+                                {
+                                    ElementId ParameterPubliéNomElec = TSH.Elements.GetParent(ParameterPublié);
+                                    try
+                                    {
+                                        TSH.Parameters.SetSmartTextParameterCreation(ParameterPubliéNomElec, SmartTxtTable[4]);
+                                        NomElecUpdated = true; // Marquer la méthode comme exécutée
+                                        LogMessage($"Paramètre '{nomElec}' mis à jour.", System.Drawing.Color.Green);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        LogMessage($"Erreur : lors de la mise à jour du paramètre 'Designation' : {ex.Message}", System.Drawing.Color.Red);
                                         throw; // Relancer l'exception pour s'assurer que le bloc finally est exécuté
                                     }
                                 }
@@ -1455,7 +1474,7 @@ namespace iFixInvalidity
         }
 
         //Fonction qui recupere extention du document
-        private string Extention(DocumentId currentDoc)
+        public string Extention(DocumentId currentDoc)
         {
             PdmObjectId pdmObjectId = new PdmObjectId();
             string DocumentExt = "";
@@ -1793,6 +1812,103 @@ namespace iFixInvalidity
             return totalBrut;
         }
 
+        //Message de confirmation
+        private void MessageConfirmation(bool Indice_3DCreated, bool DesignationCreated,bool CommentaireCreated ,bool OPIdCreated, bool Nom_ElecCreated, bool TotalBrutCreated, bool NomDocuCreated, string Indice_3DTxt, string DesignationTxt, string CommentaireTxt, string OPIdTxt, string Nom_ElecTxt, string TotalBrutTxt, string NomDocuTxt)
+        {
+            // Construction du message de confirmation
+            string confirmationMessage = "Opérations de création de paramètres :\n";
+
+            // Ajout des résultats de création pour chaque paramètre
+            if (Indice_3DCreated)
+            {
+                confirmationMessage += $"{Indice_3DTxt} : Créé avec succès.\n";
+                LogMessage($"Paramètre '{Indice_3DTxt}' créé.", System.Drawing.Color.Green);
+            }
+            else
+            {
+                confirmationMessage += $"{Indice_3DTxt} : Non créé, existe déjà.\n";
+                LogMessage($"Paramètre '{Indice_3DTxt}' existe déjà.", System.Drawing.Color.Black);
+            }
+
+            if (DesignationCreated)
+            {
+                confirmationMessage += $"{DesignationTxt} : Créé avec succès.\n";
+                LogMessage($"Paramètre '{DesignationTxt}' créé.", System.Drawing.Color.Green);
+            }
+            else
+            {
+                confirmationMessage += $"{DesignationTxt} : Non créé, existe déjà.\n";
+                LogMessage($"Paramètre '{DesignationTxt}' existe déjà.", System.Drawing.Color.Black);
+            }
+
+            if (CommentaireCreated)
+            {
+                confirmationMessage += $"{CommentaireTxt} : Créé avec succès.\n";
+                LogMessage($"Paramètre '{CommentaireTxt}' créé.", System.Drawing.Color.Green);
+            }
+            else
+            {
+                confirmationMessage += $"{CommentaireTxt} : Non créé, existe déjà.\n";
+                LogMessage($"Paramètre '{CommentaireTxt}' existe déjà.", System.Drawing.Color.Black);
+            }
+
+            if (OPIdCreated)
+            {
+                confirmationMessage += $"{OPIdTxt} : Créé avec succès.\n";
+                LogMessage($"Paramètre '{OPIdTxt}' créé.", System.Drawing.Color.Green);
+            }
+            else
+            {
+                confirmationMessage += $"{OPIdTxt} : Non créé, existe déjà.\n";
+                LogMessage($"Paramètre '{OPIdTxt}' existe déjà.", System.Drawing.Color.Black);
+            }
+
+            if (Nom_ElecCreated)
+            {
+                confirmationMessage += $"{Nom_ElecTxt} : Créé avec succès.\n";
+                LogMessage($"Paramètre '{Nom_ElecTxt}' créé.", System.Drawing.Color.Green);
+            }
+            else
+            {
+                confirmationMessage += $"{Nom_ElecTxt} : Non créé, existe déjà.\n";
+                LogMessage($"Paramètre '{Nom_ElecTxt}' existe déjà.", System.Drawing.Color.Black);
+            }
+
+            if (TotalBrutCreated)
+            {
+                confirmationMessage += $"{TotalBrutTxt} : Créé avec succès.\n";
+                LogMessage($"Paramètre '{TotalBrutTxt}' créé.", System.Drawing.Color.Green);
+            }
+            else
+            {
+                confirmationMessage += $"{TotalBrutTxt} : Non créé, existe déjà.\n";
+                LogMessage($"Paramètre '{TotalBrutTxt}' existe déjà.", System.Drawing.Color.Black);
+            }
+
+            if (NomDocuCreated)
+            {
+                confirmationMessage += $"{NomDocuTxt} : Créé avec succès.\n";
+                LogMessage($"Paramètre '{NomDocuTxt}' créé.", System.Drawing.Color.Green);
+            }
+            else
+            {
+                confirmationMessage += $"{NomDocuTxt} : Non créé, existe déjà.\n";
+                LogMessage($"Paramètre '{NomDocuTxt}' existe déjà.", System.Drawing.Color.Black);
+            }
+
+            // Affichage du message de confirmation
+            if (Indice_3DCreated || DesignationCreated || CommentaireCreated || OPIdCreated || Nom_ElecCreated || TotalBrutCreated || NomDocuCreated)
+            {
+                LogMessage(confirmationMessage, System.Drawing.Color.Blue);
+                MessageBox.Show(confirmationMessage, "Confirmation", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                LogMessage("Aucun paramètre n'a été créé, tous existent déjà.", System.Drawing.Color.Black);
+                MessageBox.Show("Aucun paramètre n'a été créé, tous existent déjà.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
         //Formulaire des options---------------------------------------------------------------------------------------------------
         private void optionsToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -1836,11 +1952,14 @@ namespace iFixInvalidity
 
         }
 
+
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         // Gestionnaire de clic pour le bouton Fix.-----------------------------------------------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         private void button1_Click_1(object sender, EventArgs e)
         {
+            
+
             try
             {
                 // Vérification si un document courant est sélectionné
@@ -1864,11 +1983,11 @@ namespace iFixInvalidity
             try
             {
                 // Récupération de l'extension du document
-                string ext = Extention(currentDoc.DocId);
+                //string ext = Extention(currentDoc.DocId);
 
-                if (!string.IsNullOrEmpty(ext))
+                if (!string.IsNullOrEmpty(currentDoc.DocExtention))
                 {
-                    if (ext == ".TopPrt") // Vérifie si c'est un document d'électrode
+                    if (currentDoc.DocExtention == ".TopPrt") // Vérifie si c'est un document d'électrode
                     {
                         if (currentDoc.DocIsElectrode)
                         {
@@ -1958,8 +2077,8 @@ namespace iFixInvalidity
                     {
                         LogMessage("Document non électrode détecté.", System.Drawing.Color.Black);
 
-                        // Récupération du document maître et du document de préparation
-                        var (prepaDocument, docMaster) = RecupDocuMaster(currentDoc.DocId);
+                        //// Récupération du document maître et du document de préparation
+                        //var (prepaDocument, docMaster) = RecupDocuMaster(currentDoc.DocId);
 
                         // Configuration des paramètres de dérivation
                         DerivationConfig(currentDoc.DocId);
@@ -1993,12 +2112,12 @@ namespace iFixInvalidity
                         // Création des SmartText
                         SmartText[] SmartTxtTable = new SmartText[6]
                         {
-                    CreateSmartTxt(OPOriginal),         // Index 0
-                    CreateSmartTxt(commentaireOriginal), // Index 1
-                    CreateSmartTxt(designationOriginal), // Index 2
-                    CreateSmartTxt(indice3D),            // Index 3
-                    CreateSmartTxt(nomElecOriginal),    // Index 4
-                    CreateSmartTxt(nomDocuOriginal)      // Index 5
+                            CreateSmartTxt(OPOriginal),         // Index 0
+                            CreateSmartTxt(commentaireOriginal), // Index 1
+                            CreateSmartTxt(designationOriginal), // Index 2
+                            CreateSmartTxt(indice3D),            // Index 3
+                            CreateSmartTxt(nomElecOriginal),    // Index 4
+                            CreateSmartTxt(nomDocuOriginal)      // Index 5
                         };
 
                         // Appliquer les paramètres SmartText au document courant
@@ -2025,9 +2144,6 @@ namespace iFixInvalidity
                 MessageBox.Show("Erreur : Le document courant est invalide ou vide.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-
-            // Récupération de l'extension du document
-            string ext = Extention(currentDoc.DocId);
 
             // Configuration des paramètres de dérivation si le document est dérivé
             DerivationConfig(currentDoc.DocId);
@@ -2072,11 +2188,11 @@ namespace iFixInvalidity
                 ElementId ModelingStage = new ElementId();
 
                 // Traitement basé sur l'extension du document
-                if (ext != null)
+                if (currentDoc.DocExtention != null)
                 {
                     ElementId prepaElectrodeStage = new ElementId();
 
-                    if (ext == ".TopEld")
+                    if (currentDoc.DocExtention == ".TopEld")
                     {
                         // Si le document est un fichier d'électrode, configure l'étape de préparation
                         prepaElectrodeStage = PrepaElectrodeStage(currentDoc.DocId);
@@ -2128,49 +2244,52 @@ namespace iFixInvalidity
                 ElementId DesignationExiste = TSH.Elements.SearchByName(currentDoc.DocId, DesignationTxt);
                 ElementId Nom_ElecExiste = TSH.Elements.SearchByName(currentDoc.DocId, Nom_ElecTxt);
                 ElementId TotalBrutExiste = TSH.Elements.SearchByName(currentDoc.DocId, TotalBrutTxt);
+                ElementId OPExiste = TSH.Elements.SearchByName(currentDoc.DocId, OPIdTxt);
 
                 // Vérification si le document est une électrode
                 bool iselectrode = Iselectrode(docMaster);
-
-                // Création des paramètres si nécessaire
-                if (CommentaireExiste == ElementId.Empty)
-                {
-                    if (!currentDoc.DocIsElectrode && !iselectrode)
+                
+                    // Création des paramètres si nécessaire
+                    if (CommentaireExiste == ElementId.Empty)
                     {
-                        // Création du paramètre "Commentaire"
-                        ElementId CommentaireParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
-                        TSH.Elements.SetName(CommentaireParam, CommentaireTxt);
-                        CommentaireCreated = true;
-                        LogMessage($"Paramètre '{CommentaireTxt}' créé.", System.Drawing.Color.Green);
+                        if (!currentDoc.DocIsElectrode && !iselectrode)
+                        {
+                            // Création du paramètre "Commentaire"
+                            ElementId CommentaireParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
+                            TSH.Elements.SetName(CommentaireParam, CommentaireTxt);
+                            CommentaireCreated = true;
+                            LogMessage($"Paramètre '{CommentaireTxt}' créé.", System.Drawing.Color.Green);
+                        }
+                        else
+                        {
+                            LogMessage($"Paramètre '{CommentaireTxt}' existe déjà.", System.Drawing.Color.Black);
+                        }
                     }
                     else
                     {
                         LogMessage($"Paramètre '{CommentaireTxt}' existe déjà.", System.Drawing.Color.Black);
                     }
-                }
-                else
+                if (iselectrode)
                 {
-                    LogMessage($"Paramètre '{CommentaireTxt}' existe déjà.", System.Drawing.Color.Black);
-                }
-
-                if (Nom_docuExiste == ElementId.Empty)
-                {
-                    if (currentDoc.DocIsElectrode || iselectrode)
+                    if (Nom_docuExiste == ElementId.Empty)
                     {
-                        // Création du paramètre "Nom_docu"
-                        ElementId Nom_docuParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
-                        TSH.Elements.SetName(Nom_docuParam, nom_docuTxt);
-                        NomDocuCreated = true;
-                        LogMessage($"Paramètre '{nom_docuTxt}' créé.", System.Drawing.Color.Green);
+                        if (currentDoc.DocIsElectrode || iselectrode)
+                        {
+                            // Création du paramètre "Nom_docu"
+                            ElementId Nom_docuParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
+                            TSH.Elements.SetName(Nom_docuParam, nom_docuTxt);
+                            NomDocuCreated = true;
+                            LogMessage($"Paramètre '{nom_docuTxt}' créé.", System.Drawing.Color.Green);
+                        }
+                        else
+                        {
+                            LogMessage($"Paramètre '{nom_docuTxt}' existe déjà.", System.Drawing.Color.Black);
+                        }
                     }
                     else
                     {
                         LogMessage($"Paramètre '{nom_docuTxt}' existe déjà.", System.Drawing.Color.Black);
                     }
-                }
-                else
-                {
-                    LogMessage($"Paramètre '{nom_docuTxt}' existe déjà.", System.Drawing.Color.Black);
                 }
 
                 if (Indice_3DExiste == ElementId.Empty)
@@ -2218,25 +2337,31 @@ namespace iFixInvalidity
                 {
                     LogMessage($"Paramètre '{Nom_ElecTxt}' existe déjà.", System.Drawing.Color.Black);
                 }
-
-                if (TotalBrutExiste == ElementId.Empty)
+               
+                if (currentDoc.DocExtention != null)
                 {
-                    if (currentDoc.DocIsElectrode || iselectrode)
+                    if (currentDoc.DocExtention != ".TopMillTurn")
                     {
-                        // Création du paramètre "Total brut"
-                        ElementId TotalBrutParam = TSH.Parameters.CreateSmartIntegerParameter(currentDoc.DocId, new SmartInteger(0));
-                        TSH.Elements.SetName(TotalBrutParam, TotalBrutTxt);
-                        TotalBrutCreated = true;
-                        LogMessage($"Paramètre '{TotalBrutTxt}' créé.", System.Drawing.Color.Green);
+                        if (TotalBrutExiste == ElementId.Empty)
+                        {
+                            if (currentDoc.DocIsElectrode || iselectrode)
+                            {
+                                // Création du paramètre "Total brut"
+                                ElementId TotalBrutParam = TSH.Parameters.CreateSmartIntegerParameter(currentDoc.DocId, new SmartInteger(0));
+                                TSH.Elements.SetName(TotalBrutParam, TotalBrutTxt);
+                                TotalBrutCreated = true;
+                                LogMessage($"Paramètre '{TotalBrutTxt}' créé.", System.Drawing.Color.Green);
+                            }
+                            else
+                            {
+                                LogMessage($"Paramètre '{TotalBrutTxt}' existe déjà.", System.Drawing.Color.Black);
+                            }
+                        }
+                        else
+                        {
+                            LogMessage($"Paramètre '{TotalBrutTxt}' existe déjà.", System.Drawing.Color.Black);
+                        }
                     }
-                    else
-                    {
-                        LogMessage($"Paramètre '{TotalBrutTxt}' existe déjà.", System.Drawing.Color.Black);
-                    }
-                }
-                else
-                {
-                    LogMessage($"Paramètre '{TotalBrutTxt}' existe déjà.", System.Drawing.Color.Black);
                 }
 
                 // Obtention de la liste des publications pour vérifier l'existence de "OP"
@@ -2253,22 +2378,11 @@ namespace iFixInvalidity
                         }
                     }
 
-                    string DocumentExt = "";
-                    try
-                    {
-                        DocumentExt = Extention(currentDoc.DocId);
-                    }
-                    catch (Exception ex)
-                    {
-                        LogMessage($"Erreur : {ex.Message}", System.Drawing.Color.Red);
-                        MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-
                     if (!OPIdExisteOui)
                     {
-                        if (DocumentExt != null)
+                        if (currentDoc.DocExtention != null)
                         {
-                            if (DocumentExt == ".TopNewPrtSet")
+                            if (currentDoc.DocExtention == ".TopNewPrtSet")
                             {
                                 bool derivé = TSHD.Tools.IsDerived(currentDoc.DocId);
                                 if (derivé)
@@ -2281,16 +2395,20 @@ namespace iFixInvalidity
                                 }
                                 else
                                 {
-                                    // Publication du paramètre "OP"
-                                    ElementId OPParam = TSH.Parameters.PublishText(currentDoc.DocId, OPIdTxt, new SmartText("1"));
-                                    TSH.Elements.SetName(OPParam, OPIdTxt);
-                                    OPIdCreated = true;
-                                    LogMessage($"Paramètre '{OPIdTxt}' créé.", System.Drawing.Color.Green);
+                                    if (OPExiste == ElementId.Empty)
+                                    {
+                                        // Création du paramètre "OP" pour un document dérivé
+                                        ElementId OPParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText("1"));
+                                        // Publication du paramètre "OP"
+                                        TSH.Elements.SetName(OPParam, OPIdTxt);
+                                        //OPParam = TSH.Parameters.PublishText(currentDoc.DocId, OPIdTxt, new SmartText("1"));
+                                        OPIdCreated = true;
+                                        LogMessage($"Paramètre '{OPIdTxt}' créé.", System.Drawing.Color.Green);
+                                    }
                                 }
                             }
-                            if (DocumentExt == ".TopMillTurn")
+                            if (currentDoc.DocExtention == ".TopMillTurn")
                             {
-                                ElementId OPExiste = TSH.Elements.SearchByName(currentDoc.DocId, OPIdTxt);
                                 if (OPExiste == ElementId.Empty)
                                 {
                                     // Création du paramètre "OP" pour un document de type ".TopMillTurn"
@@ -2315,7 +2433,7 @@ namespace iFixInvalidity
                         LogMessage($"Paramètre '{OPIdTxt}' existe déjà.", System.Drawing.Color.Black);
                     }
 
-                    if (DocumentExt == ".TopNewPrtSet")
+                    if (currentDoc.DocExtention == ".TopNewPrtSet")
                     {
                         Nom_ElecExiste = TSH.Elements.SearchByName(currentDoc.DocId, Nom_ElecTxt);
 
@@ -2334,19 +2452,21 @@ namespace iFixInvalidity
                                 LogMessage($"Paramètre '{Nom_ElecTxt}' existe déjà.", System.Drawing.Color.Black);
                             }
 
-                            if (Nom_docuExiste == ElementId.Empty)
-                            {
-                                // Création du paramètre "Nom_docu" pour un document de type ".TopNewPrtSet"
-                                ElementId Nom_DocuParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
-                                TSH.Elements.SetName(Nom_DocuParam, NomDocuTxt);
-                                NomDocuCreated = true;
-                                LogMessage($"Paramètre '{NomDocuTxt}' créé.", System.Drawing.Color.Green);
-                            }
-                            else
-                            {
-                                LogMessage($"Paramètre '{NomDocuTxt}' existe déjà.", System.Drawing.Color.Black);
-                            }
+                            //if (Nom_docuExiste == ElementId.Empty)
+                            //{
+                            //    // Création du paramètre "Nom_docu" pour un document de type ".TopNewPrtSet"
+                            //    ElementId Nom_DocuParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
+                            //    TSH.Elements.SetName(Nom_DocuParam, NomDocuTxt);
+                            //    NomDocuCreated = true;
+                            //    LogMessage($"Paramètre '{NomDocuTxt}' créé.", System.Drawing.Color.Green);
+                            //}
+                            //else
+                            //{
+                            //    LogMessage($"Paramètre '{NomDocuTxt}' existe déjà.", System.Drawing.Color.Black);
+                            //}
                         }
+                        
+                        MessageConfirmation(Indice_3DCreated, DesignationCreated, CommentaireCreated, OPIdCreated, Nom_ElecCreated, TotalBrutCreated, NomDocuCreated, Indice_3DTxt, DesignationTxt, CommentaireTxt, OPIdTxt, Nom_ElecTxt, TotalBrutTxt, NomDocuTxt);
                     }
                     else
                     {
@@ -2354,98 +2474,6 @@ namespace iFixInvalidity
                     }
                 }
 
-                // Construction du message de confirmation
-                string confirmationMessage = "Opérations de création de paramètres :\n";
-
-                // Ajout des résultats de création pour chaque paramètre
-                if (Indice_3DCreated)
-                {
-                    confirmationMessage += $"{Indice_3DTxt} : Créé avec succès.\n";
-                    LogMessage($"Paramètre '{Indice_3DTxt}' créé.", System.Drawing.Color.Green);
-                }
-                else
-                {
-                    confirmationMessage += $"{Indice_3DTxt} : Non créé, existe déjà.\n";
-                    LogMessage($"Paramètre '{Indice_3DTxt}' existe déjà.", System.Drawing.Color.Black);
-                }
-
-                if (DesignationCreated)
-                {
-                    confirmationMessage += $"{DesignationTxt} : Créé avec succès.\n";
-                    LogMessage($"Paramètre '{DesignationTxt}' créé.", System.Drawing.Color.Green);
-                }
-                else
-                {
-                    confirmationMessage += $"{DesignationTxt} : Non créé, existe déjà.\n";
-                    LogMessage($"Paramètre '{DesignationTxt}' existe déjà.", System.Drawing.Color.Black);
-                }
-
-                if (CommentaireCreated)
-                {
-                    confirmationMessage += $"{CommentaireTxt} : Créé avec succès.\n";
-                    LogMessage($"Paramètre '{CommentaireTxt}' créé.", System.Drawing.Color.Green);
-                }
-                else
-                {
-                    confirmationMessage += $"{CommentaireTxt} : Non créé, existe déjà.\n";
-                    LogMessage($"Paramètre '{CommentaireTxt}' existe déjà.", System.Drawing.Color.Black);
-                }
-
-                if (OPIdCreated)
-                {
-                    confirmationMessage += $"{OPIdTxt} : Créé avec succès.\n";
-                    LogMessage($"Paramètre '{OPIdTxt}' créé.", System.Drawing.Color.Green);
-                }
-                else
-                {
-                    confirmationMessage += $"{OPIdTxt} : Non créé, existe déjà.\n";
-                    LogMessage($"Paramètre '{OPIdTxt}' existe déjà.", System.Drawing.Color.Black);
-                }
-
-                if (Nom_ElecCreated)
-                {
-                    confirmationMessage += $"{Nom_ElecTxt} : Créé avec succès.\n";
-                    LogMessage($"Paramètre '{Nom_ElecTxt}' créé.", System.Drawing.Color.Green);
-                }
-                else
-                {
-                    confirmationMessage += $"{Nom_ElecTxt} : Non créé, existe déjà.\n";
-                    LogMessage($"Paramètre '{Nom_ElecTxt}' existe déjà.", System.Drawing.Color.Black);
-                }
-
-                if (TotalBrutCreated)
-                {
-                    confirmationMessage += $"{TotalBrutTxt} : Créé avec succès.\n";
-                    LogMessage($"Paramètre '{TotalBrutTxt}' créé.", System.Drawing.Color.Green);
-                }
-                else
-                {
-                    confirmationMessage += $"{TotalBrutTxt} : Non créé, existe déjà.\n";
-                    LogMessage($"Paramètre '{TotalBrutTxt}' existe déjà.", System.Drawing.Color.Black);
-                }
-
-                if (NomDocuCreated)
-                {
-                    confirmationMessage += $"{NomDocuTxt} : Créé avec succès.\n";
-                    LogMessage($"Paramètre '{NomDocuTxt}' créé.", System.Drawing.Color.Green);
-                }
-                else
-                {
-                    confirmationMessage += $"{NomDocuTxt} : Non créé, existe déjà.\n";
-                    LogMessage($"Paramètre '{NomDocuTxt}' existe déjà.", System.Drawing.Color.Black);
-                }
-
-                // Affichage du message de confirmation
-                if (Indice_3DCreated || DesignationCreated || CommentaireCreated || OPIdCreated || Nom_ElecCreated || TotalBrutCreated || NomDocuCreated)
-                {
-                    LogMessage(confirmationMessage, System.Drawing.Color.Blue);
-                    MessageBox.Show(confirmationMessage, "Confirmation", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                else
-                {
-                    LogMessage("Aucun paramètre n'a été créé, tous existent déjà.", System.Drawing.Color.Black);
-                    MessageBox.Show("Aucun paramètre n'a été créé, tous existent déjà.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
             }
             catch (Exception ex)
             {
