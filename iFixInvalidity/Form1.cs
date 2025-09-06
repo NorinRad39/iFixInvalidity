@@ -17,116 +17,47 @@ using System.IO;
 using System.Security;
 using System.Security.Cryptography;
 using System.Diagnostics;
-
+using OutilsTs;
 
 namespace iFixInvalidity
 {
+    /// <summary>
+    /// <b>Formulaire principal</b> de l'outil iFixInvalidity.
+    /// <para>Responsabilités&nbsp;:</para>
+    /// <ul>
+    ///   <li>Connexion à TopSolid</li>
+    ///   <li>Lecture / mise à jour de paramètres texte (Commentaire, Designation, Indice 3D)</li>
+    ///   <li>Navigation récursive pour retrouver le document maître (pièce d'origine)</li>
+    /// </ul>
+    /// </summary>
     public partial class Form1 : Form
     {
+        /// <summary>
+        /// Objet éventuel pour une future extension liée à TopSolidDesign.
+        /// </summary>
         public object TopSolidDesign { get; private set; }
 
+        /// <summary>
+        /// Constructeur principal.
+        /// <br/>Initialise les composants, établit la connexion TopSolid et affiche le nom du document courant si disponible.
+        /// </summary>
         public Form1()
         {
             InitializeComponent();
-            ConnectToTopSolid(); // Connexion à TopSolid au lancement de l'application
-            ConnectToTopSolidDesignHost();
-            DisplayDocumentName();
+
+            // Créez une instance de la classe StartConnect
+            StartConnect outilsTs = new StartConnect();
+           
+            // Appelez la méthode publique pour établir les connexions
+            outilsTs.ConnectionTopsolid();
             
+            DisplayDocumentName();
         }
 
-
-        private void ConnectToTopSolid()
-        {
-            try
-            {
-                // Vérifier si la connexion est déjà établie
-                if (!TSH.IsConnected)
-                {
-                    // Connexion à TopSolid avec un paramètre d'initialisation (si nécessaire)
-                    TSH.Connect();
-
-                    // Vérifier à nouveau si la connexion est réussie
-                    if (TSH.IsConnected)
-                    {
-                        LogMessage("Connexion réussie à TopSolid.");
-                        //MessageBox.Show("Connexion réussie à TopSolid.", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                    else
-                    {
-                        LogMessage("Connexion échouée à TopSolid.");
-                        MessageBox.Show("Connexion échouée à TopSolid.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-                else
-                {
-                    LogMessage("TopSolid est déjà connecté.");
-                    MessageBox.Show("TopSolid est déjà connecté.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-            }
-            catch (InvalidOperationException ex)
-            {
-                // Gérer une exception spécifique si nécessaire
-                LogMessage($"Problème opérationnel : {ex.Message}");
-                MessageBox.Show($"Problème opérationnel : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            catch (Exception ex)
-            {
-                // Gérer d'autres exceptions
-                LogMessage($"Erreur lors de la connexion à TopSolid : {ex.Message}");
-                MessageBox.Show($"Erreur lors de la connexion à TopSolid : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-
-
-
-        private void ConnectToTopSolidDesignHost()
-        {
-            try
-            {
-                // Vérifier si la connexion est déjà établie
-                if (!TopSolidDesignHost.IsConnected)
-                {
-                    // Connexion à TopSolid avec un paramètre d'initialisation (si nécessaire)
-                    TopSolidDesignHost.Connect();
-
-                    // Vérifier à nouveau si la connexion est réussie
-                    if (TopSolidDesignHost.IsConnected)
-                    {
-                        LogMessage("Connexion réussie à TopSolid module design.");
-                        //MessageBox.Show("Connexion réussie à TopSolid module design.", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                    else
-                    {
-                        LogMessage("Connexion échouée à TopSolid module design.");
-                        MessageBox.Show("Connexion échouée à TopSolid module design.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-                else
-                {
-                    LogMessage("TopSolid module design est déjà connecté.");
-                    MessageBox.Show("TopSolid module design est déjà connecté.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-            }
-            catch (InvalidOperationException ex)
-            {
-                // Gérer une exception spécifique si nécessaire
-                LogMessage($"Problème opérationnel : {ex.Message}");
-                MessageBox.Show($"Problème opérationnel : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            catch (Exception ex)
-            {
-                // Gérer d'autres exceptions
-                LogMessage($"Erreur lors de la connexion à TopSolid module design : {ex.Message}");
-                MessageBox.Show($"Erreur lors de la connexion à TopSolid module design : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-
-
-
-
-        // Récupère l'identifiant du document courant.
+        /// <summary>
+        /// Récupère l'identifiant du document actuellement édité dans TopSolid.
+        /// </summary>
+        /// <returns><c>DocumentId</c> valide ou <c>DocumentId.Empty</c> en cas d'erreur.</returns>
         private DocumentId DocumentCourant()
         {
             try
@@ -143,7 +74,11 @@ namespace iFixInvalidity
             }
         }
 
-        // Récupère le nom du document courant.
+        /// <summary>
+        /// Récupère le nom (friendly name) du document donné.
+        /// </summary>
+        /// <param name="documentCourantId">Identifiant du document.</param>
+        /// <returns>Nom du document ou "Nom inconnu" si échec.</returns>
         private string NomDocumentCourant(DocumentId documentCourantId)
         {
             try
@@ -160,16 +95,24 @@ namespace iFixInvalidity
             }
         }
 
-
-
-
-
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         //Fonction recurcive pour remonter au document piece original-------------------------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+        /// <summary>
+        /// Recherche récursivement le document maître (pièce d'origine) à partir d'un document courant.
+        /// <br/>Principe :
+        /// <ol>
+        ///   <li>Liste les opérations</li>
+        ///   <li>Teste si une opération est une inclusion</li>
+        ///   <li>Inspecte le type du document inclus (.TopPrt ou .TopNewPrtSet)</li>
+        ///   <li>Récursion sur les documents de préparation</li>
+        /// </ol>
+        /// </summary>
+        /// <param name="documentCourantId">Document de départ.</param>
+        /// <returns>DocumentId de la pièce d'origine ou <c>DocumentId.Empty</c>.</returns>
         private DocumentId RecupDocuMaster(DocumentId documentCourantId)
         {
             if (documentCourantId != null && documentCourantId != DocumentId.Empty)
@@ -239,9 +182,11 @@ namespace iFixInvalidity
             return DocumentId.Empty;
         }
 
-
-
-        // Récupère la liste des opérations d'un document
+        /// <summary>
+        /// Récupère la liste des opérations d'un document donné.
+        /// </summary>
+        /// <param name="documentCourantId">Identifiant du document.</param>
+        /// <returns>Liste (éventuellement vide) d'<c>ElementId</c>.</returns>
         private List<ElementId> OperationsList(DocumentId documentCourantId)
         {
             if (documentCourantId != null && documentCourantId != DocumentId.Empty)
@@ -270,6 +215,14 @@ namespace iFixInvalidity
         string Designation = "Designation";
         string Indice_3D = "Indice 3D";
 
+        /// <summary>
+        /// Localise dans le document maître les paramètres publiés correspondant aux noms
+        /// <c>Indice 3D</c>, <c>Commentaire</c> et <c>Designation</c>.
+        /// </summary>
+        /// <param name="docMaster">Document maître.</param>
+        /// <param name="indice3D">Paramètre Indice 3D trouvé (ou vide).</param>
+        /// <param name="commentaireOriginal">Paramètre Commentaire original.</param>
+        /// <param name="designationOriginal">Paramètre Designation original.</param>
         private void ParametreMaster(in DocumentId docMaster, out ElementId indice3D, out ElementId commentaireOriginal, out ElementId designationOriginal)
         {
             // Initialisation des paramètres out avec des valeurs par défaut
@@ -290,7 +243,6 @@ namespace iFixInvalidity
                     {
                         // Récupération du nom de chaque paramètre publié pour comparaison
                         string ParameterName = TSH.Elements.GetFriendlyName(Parameter);
-                        // MessageBox.Show(ParameterName);
 
                         // Si le nom du paramètre est égal au nom attendu, renvoyer l'Element ID
                         if (ParameterName == Indice_3D)
@@ -326,9 +278,11 @@ namespace iFixInvalidity
             }
         }
 
-
-
-        //Recuperation des parametres a modifier.
+        /// <summary>
+        /// Met à jour dans le document courant les paramètres texte ciblés avec des valeurs SmartText provenant du tableau fourni.
+        /// </summary>
+        /// <param name="documentCourantId">Document sur lequel appliquer les modifications.</param>
+        /// <param name="SmartTxtTable">Tableau contenant les SmartText (indices 1,2,3 utilisés).</param>
         private void SetSmartTxtParameter(DocumentId documentCourantId, SmartText[] SmartTxtTable)
         {
             if (!TopSolidHost.Application.StartModification("My Action", false)) return;
@@ -350,7 +304,6 @@ namespace iFixInvalidity
                     foreach (ElementId ParameterPublié in ParameterPubliéList)
                     {
                         string Parametertype = TSH.Elements.GetTypeFullName(ParameterPublié);
-                        // MessageBox.Show(Parametertype);
 
                         if (Parametertype == "TopSolid.Kernel.DB.Parameters.TextParameterEntity")
                         {
@@ -429,6 +382,10 @@ namespace iFixInvalidity
             }
         }
 
+        /// <summary>
+        /// Ajoute un message dans la ListBox de log et fait défiler vers le bas.
+        /// </summary>
+        /// <param name="message">Texte à consigner.</param>
         private void LogMessage(string message)
         {
             // Ajouter le message au ListBox
@@ -437,8 +394,11 @@ namespace iFixInvalidity
             logListBox.TopIndex = logListBox.Items.Count - 1;
         }
 
-
-
+        /// <summary>
+        /// Crée un objet <c>SmartText</c> à partir d'un <c>ElementId</c>.
+        /// </summary>
+        /// <param name="smartTxt">Identifiant du paramètre texte.</param>
+        /// <returns>Instance SmartText.</returns>
         private SmartText CreateSmartTxt(ElementId smartTxt)
         {
             SmartText SmartTxtId = new SmartText(smartTxt);
@@ -446,46 +406,41 @@ namespace iFixInvalidity
             return SmartTxtId;
         }
 
-
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        // Gestionnaire de clic pour le bouton.-----------------------------------------------------------------------------------------------------------------------------------------
-        //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        // Gestionnaire de clic pour le bouton.
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+        /// <summary>
+        /// Gestionnaire du bouton principal : 
+        /// <br/>1. Récupère le document courant<br/>
+        /// 2. Trouve le document maître<br/>
+        /// 3. Récupère les paramètres publiés<br/>
+        /// 4. Applique les SmartText sur le document courant.
+        /// </summary>
         private void button1_Click_1(object sender, EventArgs e)
         {
-            // Déclaration variable docu courant
-            DocumentId documentCourantId = new DocumentId();
+            Document curentDoc = new Document();
+            Document docMaster = new Document();
 
-            // Récupération docu courant
             try
             {
-                documentCourantId = DocumentCourant();
-                if (documentCourantId != DocumentId.Empty)
-                {
-                    string nomDocumentCourant = NomDocumentCourant(documentCourantId);
-                    LogMessage($"Document courant : {nomDocumentCourant}");
-                    MessageBox.Show($"Document courant : {nomDocumentCourant}", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                else
-                {
-                    LogMessage("Aucun document courant trouvé.");
-                    MessageBox.Show("Aucun document courant trouvé.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
+                curentDoc.DocId = TSH.Documents.EditedDocument;
             }
             catch (Exception ex)
             {
-                LogMessage($"Une erreur s'est produite : {ex.Message}");
-                MessageBox.Show($"Une erreur s'est produite : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LogMessage($"Erreur récupération EditedDocument : {ex.Message}");
+                MessageBox.Show($"Erreur lors de la récupération du document courant : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // fallback : méthode centralisée qui gère les exceptions
+                curentDoc.DocId = DocumentCourant();
             }
 
             // Fonction recup docu master
-            DocumentId docMaster = RecupDocuMaster(documentCourantId);
-            if (docMaster != DocumentId.Empty)
+            docMaster.DocId = RecupDocuMaster(curentDoc.DocId);
+            if (docMaster.DocId != DocumentId.Empty)
             {
-                String docMasterName = TSH.Documents.GetName(docMaster);
-                LogMessage($"Document maître trouvé : {docMasterName}");
-                MessageBox.Show("Document pièce trouvé : " + docMasterName);
+                
+                LogMessage($"Document maître trouvé : {docMaster.DocNomTxt}");
+                MessageBox.Show("Document pièce trouvé : " + docMaster.DocNomTxt);
             }
             else
             {
@@ -500,7 +455,14 @@ namespace iFixInvalidity
             ElementId designationOriginal;
 
             // Récupération des paramètres maître
-            ParametreMaster(in docMaster, out indice3D, out commentaireOriginal, out designationOriginal);
+            // Remplacez l'appel de la méthode ParametreMaster dans button1_Click_1
+            // Ancien code (provoque CS8156) :
+            // ParametreMaster(in docMaster.DocId, out indice3D, out commentaireOriginal, out designationOriginal);
+
+            // Nouveau code (corrige CS8156) :
+            ParametreMaster(docMaster.DocId, out indice3D, out commentaireOriginal, out designationOriginal);
+
+            
 
             SmartText SmartTxtCommentaireId = CreateSmartTxt(commentaireOriginal);
             SmartText SmartTxtDesignationId = CreateSmartTxt(designationOriginal);
@@ -515,16 +477,15 @@ namespace iFixInvalidity
             SmartTxtTable[2] = SmartTxtDesignationId; // Index 2
             SmartTxtTable[3] = SmartTxtIndice_3DId; // Index 3
 
-            SetSmartTxtParameter(documentCourantId, SmartTxtTable);
+            SetSmartTxtParameter(curentDoc.DocId, SmartTxtTable);
 
             //TSH.Disconnect();
             //Environment.Exit(0);
         }
 
-
-
-
-        //Formulaire des options---------------------------------------------------------------------------------------------------
+        /// <summary>
+        /// Ouvre le formulaire des options de configuration.
+        /// </summary>
         private void optionsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             // Créez une instance de
@@ -533,15 +494,17 @@ namespace iFixInvalidity
             form2.Show();
         }
 
-
-        //Bouton quiter-----------------------------------------------------------------------------------------------------------
+        /// <summary>
+        /// Quitte l'application immédiatement.
+        /// </summary>
         private void quitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Environment.Exit(0);
         }
 
-
-        //Bouton build ---------------------------------------------------------------------------------------------------------
+        /// <summary>
+        /// Crée les paramètres texte si absents dans le document courant.
+        /// </summary>
         private void button2_Click(object sender, EventArgs e)
         {
             DocumentId documentCourantId = DocumentCourant();
@@ -629,27 +592,37 @@ namespace iFixInvalidity
             }
         }
 
+        /// <summary>
+        /// Met à jour le label affichant le nom du document courant.
+        /// </summary>
         private void DisplayDocumentName()
         {
             DocumentId documentCourantId = DocumentCourant();
-           string documentCourantName = NomDocumentCourant(documentCourantId);
-          
+            string documentCourantName = NomDocumentCourant(documentCourantId);
             labelDocumentName.Text = documentCourantName;
         }
 
+        /// <summary>
+        /// Met à jour le label affichant le nom du document maître.
+        /// </summary>
+        /// <param name="documentCourantId">Identifiant du document maître.</param>
         private void DisplayMasterDocumentName(DocumentId documentCourantId)
         {
-            
             string documentCourantName = NomDocumentCourant(documentCourantId);
-
             labelDocumentMasterName.Text = documentCourantName;
         }
 
+        /// <summary>
+        /// Gestion du clic sur le bouton de redémarrage.
+        /// </summary>
         private void buttonRestart_Click(object sender, EventArgs e)
         {
             RestartApplication();
         }
 
+        /// <summary>
+        /// Relance l'application en cours (nouveau processus) puis ferme l'instance actuelle.
+        /// </summary>
         private void RestartApplication()
         {
             // Obtenir le chemin de l'exécutable actuel
@@ -661,11 +634,7 @@ namespace iFixInvalidity
             // Fermer l'application actuelle
             Application.Exit();
         }
-
-        
     }
 
-    internal class Elementid
-    {
-    }
+    
 }

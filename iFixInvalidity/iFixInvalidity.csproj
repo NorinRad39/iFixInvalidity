@@ -12,6 +12,8 @@
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -36,6 +38,9 @@
     <ApplicationIcon>un logo de recyclage stylisé qui passe du rouge au vert, avec un engrenage au milieu, sans aucun lien avec lecole %282%29.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="OutilsTs">
+      <HintPath>..\..\Classe-outils-topsolid\Classe outils topsolid\bin\Debug\OutilsTs.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -47,14 +52,23 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
-    <Reference Include="TopSolid.Cad.Design.Automating">
-      <HintPath>..\..\..\..\..\..\..\Program Files\TOPSOLID\TopSolid 7.18\bin\TopSolid.Cad.Design.Automating.dll</HintPath>
+    <Reference Include="TopSolid.Cad.Design.Automating, Version=7.19.400.106, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\TopSolid.Cad.Design.Automating.7.19.400.106\lib\net472\TopSolid.Cad.Design.Automating.dll</HintPath>
     </Reference>
-    <Reference Include="TopSolid.Cad.Drafting.Automating">
-      <HintPath>..\..\..\..\..\..\..\Program Files\TOPSOLID\TopSolid 7.18\bin\TopSolid.Cad.Drafting.Automating.dll</HintPath>
+    <Reference Include="TopSolid.Cad.Drafting.Automating, Version=7.19.400.106, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\TopSolid.Cad.Drafting.Automating.7.19.400.106\lib\net472\TopSolid.Cad.Drafting.Automating.dll</HintPath>
     </Reference>
-    <Reference Include="TopSolid.Kernel.Automating">
-      <HintPath>..\..\..\..\..\..\..\Program Files\TOPSOLID\TopSolid 7.18\bin\TopSolid.Kernel.Automating.dll</HintPath>
+    <Reference Include="TopSolid.Cad.Electrode.Automating, Version=7.19.400.106, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\TopSolid.Cad.Electrode.Automating.7.19.400.106\lib\net472\TopSolid.Cad.Electrode.Automating.dll</HintPath>
+    </Reference>
+    <Reference Include="TopSolid.Cam.NC.Kernel.Automating, Version=7.19.400.106, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\packages\TopSolid.Cam.NC.Kernel.Automating.7.19.400.106\lib\net472\TopSolid.Cam.NC.Kernel.Automating.dll</HintPath>
+    </Reference>
+    <Reference Include="TopSolid.Kernel.Automating, Version=7.19.400.106, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\TopSolid.Kernel.Automating.7.19.400.106\lib\net472\TopSolid.Kernel.Automating.dll</HintPath>
+    </Reference>
+    <Reference Include="TopSolid.Pdm.Explorer.Automating, Version=7.19.400.106, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\TopSolid.Pdm.Explorer.Automating.7.19.400.106\lib\net472\TopSolid.Pdm.Explorer.Automating.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -87,6 +101,7 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -104,4 +119,13 @@
     <Content Include="un logo de recyclage stylisé qui passe du rouge au vert, avec un engrenage au milieu, sans aucun lien avec lecole %282%29.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="..\packages\TopSolid.Kernel.Automating.7.19.400.106\build\TopSolid.Kernel.Automating.targets" Condition="Exists('..\packages\TopSolid.Kernel.Automating.7.19.400.106\build\TopSolid.Kernel.Automating.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>Ce projet fait référence à des packages NuGet qui sont manquants sur cet ordinateur. Utilisez l'option de restauration des packages NuGet pour les télécharger. Pour plus d'informations, consultez http://go.microsoft.com/fwlink/?LinkID=322105. Le fichier manquant est : {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\TopSolid.Kernel.Automating.7.19.400.106\build\TopSolid.Kernel.Automating.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\TopSolid.Kernel.Automating.7.19.400.106\build\TopSolid.Kernel.Automating.targets'))" />
+    <Error Condition="!Exists('..\packages\TopSolid.Pdm.Explorer.Automating.7.19.400.106\build\TopSolid.Pdm.Explorer.Automating.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\TopSolid.Pdm.Explorer.Automating.7.19.400.106\build\TopSolid.Pdm.Explorer.Automating.targets'))" />
+  </Target>
+  <Import Project="..\packages\TopSolid.Pdm.Explorer.Automating.7.19.400.106\build\TopSolid.Pdm.Explorer.Automating.targets" Condition="Exists('..\packages\TopSolid.Pdm.Explorer.Automating.7.19.400.106\build\TopSolid.Pdm.Explorer.Automating.targets')" />
 </Project>
