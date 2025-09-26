@@ -21,6 +21,7 @@ using static System.Net.Mime.MediaTypeNames;
 using TopSolid.Cad.Electrode.Automating;
 using TSEH = TopSolid.Cad.Electrode.Automating.TopSolidElectrodeHost;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
+using OutilsTs;
 
 
 
@@ -31,7 +32,7 @@ namespace iFixInvalidity
     {
         public object TopSolidDesign { get; private set; }
 
-            Document currentDoc;
+        Document currentDoc;
         DocumentId docMaster = DocumentId.Empty;
         DocumentId prepaDocument = DocumentId.Empty;
 
@@ -43,7 +44,7 @@ namespace iFixInvalidity
             ConnectToTopSolidElectrodeHost();
 
             // Initialisation de currentDoc avec l'instance actuelle de Form1
-            currentDoc = new Document(this);
+            currentDoc = new Document();
 
             currentDoc.DocId = DocumentCourant();
             DisplayDocumentName(currentDoc.DocNomTxt);
