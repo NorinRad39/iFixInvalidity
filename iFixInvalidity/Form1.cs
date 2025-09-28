@@ -23,19 +23,20 @@ using TSEH = TopSolid.Cad.Electrode.Automating.TopSolidElectrodeHost;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
 using OutilsTs;
 
-
-
 namespace iFixInvalidity
 {
 
     public partial class Form1 : Form
     {
+        #region Champs privés / propriétés
         public object TopSolidDesign { get; private set; }
 
         Document currentDoc;
         DocumentId docMaster = DocumentId.Empty;
         DocumentId prepaDocument = DocumentId.Empty;
+        #endregion
 
+        #region Constructeur
         public Form1()
         {
             InitializeComponent();
@@ -46,15 +47,19 @@ namespace iFixInvalidity
             // Initialisation de currentDoc avec l'instance actuelle de Form1
             currentDoc = new Document();
 
-            currentDoc.DocId = DocumentCourant();
+            currentDoc.DocId = TSH.Documents.EditedDocument;
             DisplayDocumentName(currentDoc.DocNomTxt);
             DisplayMasterDocumentName();
             // Récupération du document maître et du document de préparation
             (prepaDocument, docMaster) = RecupDocuMaster(currentDoc.DocId);
         }
+        #endregion
 
+        #region Etats internes
         bool prepaTrouvé = false;
+        #endregion
 
+        #region Connexions TopSolid
         //Connexion a topsolid
         private void ConnectToTopSolid()
         {
@@ -183,7 +188,9 @@ namespace iFixInvalidity
                 MessageBox.Show($"Erreur lors de la connexion à TopSolid module design : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+        #endregion
 
+        #region Accès Document courant / Nom
         // Récupère l'identifiant du document courant.
         private DocumentId DocumentCourant()
         {
@@ -204,24 +211,26 @@ namespace iFixInvalidity
         }
 
         // Récupère le nom du document courant.
-        private string NomDocumentCourant(DocumentId currentDoc)
-        {
-            try
-            {
-                // Récupération du nom du document courant
-                string nomDocument = TopSolidHost.Documents.GetName(currentDoc);
-                LogMessage($"Nom du document courant récupéré avec succès : {nomDocument}", System.Drawing.Color.Green);
-                return nomDocument;
-            }
-            catch (Exception ex)
-            {
-                // Log et affichage d'une erreur si la récupération échoue
-                LogMessage($"Erreur lors de la récupération du nom du document : {ex.Message}", System.Drawing.Color.Red);
-                MessageBox.Show($"Erreur lors de la récupération du nom du document : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return "Nom inconnu";
-            }
-        }
+        //private string NomDocumentCourant(DocumentId currentDoc)
+        //{
+        //    try
+        //    {
+        //        // Récupération du nom du document courant
+        //        string nomDocument = TopSolidHost.Documents.GetName(currentDoc);
+        //        LogMessage($"Nom du document courant récupéré avec succès : {nomDocument}", System.Drawing.Color.Green);
+        //        return nomDocument;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Log et affichage d'une erreur si la récupération échoue
+        //        LogMessage($"Erreur lors de la récupération du nom du document : {ex.Message}", System.Drawing.Color.Red);
+        //        MessageBox.Show($"Erreur lors de la récupération du nom du document : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        //        return "Nom inconnu";
+        //    }
+        //}
+        #endregion
 
+        #region Récupération Master / Prépa (récursif)
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         //Fonction recurcive pour remonter au document piece original-------------------------------------------------------------------------------------------------------------------
@@ -349,7 +358,9 @@ namespace iFixInvalidity
             // Retourne une liste vide si le document n'est pas valide ou en cas d'erreur
             return new List<ElementId>();
         }
+        #endregion
 
+        #region Noms de paramètres publiés
         // Déclaration des noms des paramètres texte à rechercher dans les publications
         string Commentaire = "Commentaire"; // Paramètre pour le commentaire
         string Designation = "Designation"; // Paramètre pour la désignation
@@ -357,7 +368,9 @@ namespace iFixInvalidity
         string OP = "OP";                  // Paramètre pour l'opération
         string nomElec = "Nom elec";       // Paramètre pour le nom de l'électrode
         string Nomdocu = "Nom_docu";      // Paramètre pour le nom du document
+        #endregion
 
+        #region Paramètres master / prépa
         //Recuperation des parametre dans le document maitre
         private void ParametreMaster(in DocumentId docMaster, in DocumentId PrepaDocument, out ElementId indice3D, out ElementId commentaireOriginal, out ElementId designationOriginal, out ElementId OPOriginal, out ElementId nomElecOriginal, out ElementId nomDocuOriginal)
         {
@@ -493,7 +506,9 @@ namespace iFixInvalidity
                 designationOriginal = new ElementId();
             }
         }
+        #endregion
 
+        #region Application SmartText (documents sans electrodes)
         //Configure les parametres dans les documents sans electrodes
         private void SetSmartTxtParameter(DocumentId currentDoc, SmartText[] SmartTxtTable, ElementId OPOriginal)
         {
@@ -1246,7 +1261,9 @@ namespace iFixInvalidity
                 TopSolidHost.Application.EndModification(false, false);
             }
         }
+        #endregion
 
+        #region Recherche / identification de paramètres
         //Cherche un parametre par son nom dans un document
         private ElementId SearchParamByName(DocumentId currentDoc, string nomParam)
         {
@@ -1315,7 +1332,9 @@ namespace iFixInvalidity
             LogMessage(infoMsg, System.Drawing.Color.Red); // Erreur en rouge
             return ElementId.Empty;
         }
+        #endregion
 
+        #region Détection électrode / opérations
         //Verifie si le document est une electrode
         public bool Iselectrode(DocumentId currentDoc)
         {
@@ -1473,7 +1492,9 @@ namespace iFixInvalidity
 
             return -1; // Retourne -1 si l'opération cible n'a pas été trouvée
         }
+        #endregion
 
+        #region Extension / Stage
         //Fonction qui recupere extention du document
         public string Extention(DocumentId currentDoc)
         {
@@ -1541,7 +1562,9 @@ namespace iFixInvalidity
             // Retourne une valeur vide si aucune étape de préparation n'est trouvée
             return ElementId.Empty;
         }
+        #endregion
 
+        #region Recherche par FriendlyName
         //Recherche elements par sont friendlyname
         private ElementId SearchByFriendlyName(DocumentId currentDoc, string FriendlyName)
         {
@@ -1581,7 +1604,9 @@ namespace iFixInvalidity
             // Retourne un élément vide si aucun élément n'est trouvé
             return ElementId.Empty;
         }
+        #endregion
 
+        #region Affichage noms documents
         //fonction pour afficher le nom du document courant
         private void DisplayDocumentName(string NomCurrentDoc)
         {
@@ -1618,10 +1643,10 @@ namespace iFixInvalidity
             {
                 // Récupération de l'ID et du nom du document courant
                 DocumentId documentCourantId = DocumentCourant();
-                string documentCourantName = NomDocumentCourant(documentCourantId);
+                //string documentCourantName = currentDoc.DocNomTxt;
 
                 // Appel de la fonction pour récupérer le document de prépa et le document maître
-                var (prepaDocument, docMaster) = RecupDocuMaster(documentCourantId);
+                var (prepaDocument, docMaster) = RecupDocuMaster(currentDoc.DocId);
 
                 // Vérification du document maître
                 if (docMaster != DocumentId.Empty)
@@ -1662,7 +1687,9 @@ namespace iFixInvalidity
 
             return prepaTrouvé; // Retourne la valeur indiquant si un document de prépa a été trouvé
         }
+        #endregion
 
+        #region Redémarrage logique
         //Fonction pour redemarrer l'app
         private void RestartApplication()
         {
@@ -1672,8 +1699,8 @@ namespace iFixInvalidity
                 if (currentDoc.DocId != DocumentId.Empty)
                 {
                     // Récupération et log du nom du document courant
-                    string nomDocumentCourant = NomDocumentCourant(currentDoc.DocId);
-                    LogMessage($"Document courant : {nomDocumentCourant}", System.Drawing.Color.Green); // Succès en vert
+                   
+                    LogMessage($"Document courant : {currentDoc.DocNomTxt}", System.Drawing.Color.Green); // Succès en vert
                 }
                 else
                 {
@@ -1697,7 +1724,9 @@ namespace iFixInvalidity
             // Process.Start(applicationPath);
             // Application.Exit();
         }
+        #endregion
 
+        #region Recherche électrode en insertion
         //Fonction qui recupere l'elementId de l'electrode dans l'insertion
         private ElementId ElecsEnInsertionId(DocumentId currentDoc, HashSet<DocumentId> visitedDocs = null)
         {
@@ -1765,7 +1794,9 @@ namespace iFixInvalidity
             // Retourne un ID vide si aucune électrode n'est trouvée
             return ElementId.Empty;
         }
+        #endregion
 
+        #region Calcul Total brut
         //Fonction Total brut
         private int TotalBrutCalcul(DocumentId currentDoc)
         {
@@ -1812,7 +1843,9 @@ namespace iFixInvalidity
             // Retourne le total brut calculé
             return totalBrut;
         }
+        #endregion
 
+        #region Message confirmation création paramètres
         //Message de confirmation
         private void MessageConfirmation(bool Indice_3DCreated, bool DesignationCreated,bool CommentaireCreated ,bool OPIdCreated, bool Nom_ElecCreated, bool TotalBrutCreated, bool NomDocuCreated, string Indice_3DTxt, string DesignationTxt, string CommentaireTxt, string OPIdTxt, string Nom_ElecTxt, string TotalBrutTxt, string NomDocuTxt)
         {
@@ -1909,7 +1942,9 @@ namespace iFixInvalidity
                 MessageBox.Show("Aucun paramètre n'a été créé, tous existent déjà.", "Attention", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
+        #endregion
 
+        #region UI : Menu / Boutons simples
         //Formulaire des options---------------------------------------------------------------------------------------------------
         private void optionsToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -1949,17 +1984,16 @@ namespace iFixInvalidity
         //Bouton invok
         private void button3_Click(object sender, EventArgs e)
         {
-            
 
         }
+        #endregion
 
-
+        #region Bouton Fix (button1)
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         // Gestionnaire de clic pour le bouton Fix.-----------------------------------------------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         private void button1_Click_1(object sender, EventArgs e)
         {
-            
 
             try
             {
@@ -2133,7 +2167,9 @@ namespace iFixInvalidity
                 LogMessage($"Erreur inattendue : {ex.Message}", System.Drawing.Color.Red);
             }
         }
+        #endregion
 
+        #region Bouton Build (button2)
         //Bouton build ---------------------------------------------------------------------------------------------------------
         private void button2_Click(object sender, EventArgs e)
         {
@@ -2489,10 +2525,13 @@ namespace iFixInvalidity
                 TopSolidHost.Application.EndModification(true, true);
             }
         }
+        #endregion
 
     }
 
+    #region Classe interne (placeholder)
     internal class Elementid
     {
     }
+    #endregion
 }
