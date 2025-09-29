@@ -2568,17 +2568,19 @@ namespace iFixInvalidity
             }
             finally
             {
+                // Assure que le document est marqué comme modifié
+                TopSolidHost.Documents.EnsureIsDirty(ref currentDocID);
                 TopSolidHost.Application.EndModification(true, true);
             }
 
             string numMouleTxt = "Moule";
-            bool NumMouleCreated = false;
-            ElementId NumMouleExiste = TSH.Elements.SearchByName(currentDoc.DocId, numMouleTxt);
+            bool numMouleCreated = false;
+            ElementId numMouleExiste = TSH.Elements.SearchByName(currentDoc.DocId, numMouleTxt);
 
 
             try
             {
-                if (NumMouleExiste == ElementId.Empty)
+                if (numMouleExiste == ElementId.Empty)
                 {
                     // Démarre la modification dans l'application TopSolid
                     if (!TopSolidHost.Application.StartModification("My Action", false)) return;
@@ -2588,9 +2590,9 @@ namespace iFixInvalidity
                     DocumentId projetDocumentId = TSH.Documents.GetDocument(ProjetPdmId);
                     TopSolidHost.Documents.EnsureIsDirty(ref projetDocumentId);
                     ElementId nomProjetId = TSH.Parameters.GetNameParameter(projetDocumentId);
-                    ElementId NumMouleParameter = TSH.Parameters.CreateTextRelayedParameter(currentDoc.DocId, nomProjetId, ParameterRelayType.Project);
+                    var numMouleParameter = TSH.Parameters.CreateTextRelayedParameter(currentDoc.DocId, nomProjetId, ParameterRelayType.Project);
 
-                    NumMouleCreated = true;
+                    numMouleCreated = true;
                     // Marquer le document comme modifié
                     //TopSolidHost.Documents.EnsureIsDirty(ref currentDocID);
                     //TopSolidHost.Application.EndModification(true, true);
