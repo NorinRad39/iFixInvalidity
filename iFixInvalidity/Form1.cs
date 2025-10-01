@@ -210,24 +210,6 @@ namespace iFixInvalidity
             }
         }
 
-        // Récupère le nom du document courant.
-        //private string NomDocumentCourant(DocumentId currentDoc)
-        //{
-        //    try
-        //    {
-        //        // Récupération du nom du document courant
-        //        string nomDocument = TopSolidHost.Documents.GetName(currentDoc);
-        //        LogMessage($"Nom du document courant récupéré avec succès : {nomDocument}", System.Drawing.Color.Green);
-        //        return nomDocument;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        // Log et affichage d'une erreur si la récupération échoue
-        //        LogMessage($"Erreur lors de la récupération du nom du document : {ex.Message}", System.Drawing.Color.Red);
-        //        MessageBox.Show($"Erreur lors de la récupération du nom du document : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        //        return "Nom inconnu";
-        //    }
-        //}
         #endregion
 
         #region Récupération Master / Prépa (récursif)
@@ -1084,6 +1066,7 @@ namespace iFixInvalidity
                     {
                         TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[0]);
                         LogMessage($"Paramètre '{CommentaireOp}' appliqué avec succès.", System.Drawing.Color.Green); // Succès en vert
+                        
                     }
                     else if (nom == DesignationOp)
                     {
@@ -2302,8 +2285,14 @@ namespace iFixInvalidity
                         // Création du paramètre "Commentaire"
                         ElementId CommentaireParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
                         TSH.Elements.SetName(CommentaireParam, CommentaireTxt);
+                        TSH.Elements.SetDescription(CommentaireParam, CommentaireTxt);
                         CommentaireCreated = true;
                         LogMessage($"Paramètre '{CommentaireTxt}' créé.", System.Drawing.Color.Green);
+                        SmartText CommentaireSmartTxt = new SmartText( CommentaireParam);
+                        ElementId CommentaireSmartTxtId = TSH.Parameters.PublishText(currentDoc.DocId, CommentaireTxt, CommentaireSmartTxt);
+                        TSH.Elements.SetName(CommentaireSmartTxtId, CommentaireTxt);
+                        LogMessage($"Paramètre '{CommentaireTxt}' publié.", System.Drawing.Color.Green);
+
                     }
                     else
                     {
@@ -2319,17 +2308,17 @@ namespace iFixInvalidity
                 {
                     if (currentDoc.DocIsElectrode || iselectrode)
                     {
-                        // Démarre la modification dans l'application TopSolid
-                        //if (!TopSolidHost.Application.StartModification("My Action", false)) ;
-                        // Création du paramètre "Nom_docu"
+                   
                         ElementId Nom_docuParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
                         TSH.Elements.SetName(Nom_docuParam, nom_docuTxt);
+                        TSH.Elements.SetDescription(Nom_docuParam, nom_docuTxt);
                         NomDocuCreated = true;
                         LogMessage($"Paramètre '{nom_docuTxt}' créé.", System.Drawing.Color.Green);
-                        //// Marquer le document comme modifié
-                        //TopSolidHost.Documents.EnsureIsDirty(ref currentDocID);
-                        //// Finalisation de la modification
-                        //TopSolidHost.Application.EndModification(true, true);
+                        SmartText Nom_docuSmartTxt = new SmartText(Nom_docuParam);
+                        ElementId Nom_docuSmartTxtId = TSH.Parameters.PublishText(currentDoc.DocId, nom_docuTxt, Nom_docuSmartTxt);
+                        TSH.Elements.SetName(Nom_docuSmartTxtId, nom_docuTxt);
+                        LogMessage($"Paramètre '{nom_docuTxt}' publié.", System.Drawing.Color.Green);
+
                     }
                     else
                     {
@@ -2344,16 +2333,16 @@ namespace iFixInvalidity
 
                 if (Indice_3DExiste == ElementId.Empty)
                 {
-                    // Démarre la modification dans l'application TopSolid
-                    //if (!TopSolidHost.Application.StartModification("My Action", false)) return;
-                    // Création du paramètre "Indice 3D"
                     ElementId Indice3DParameter = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
                     TSH.Elements.SetName(Indice3DParameter, Indice_3DTxt);
+                    TSH.Elements.SetDescription(Indice3DParameter, Indice_3DTxt);
                     Indice_3DCreated = true;
-                    // Marquer le document comme modifié
-                    //TopSolidHost.Documents.EnsureIsDirty(ref currentDocID);
-                    //TopSolidHost.Application.EndModification(true, true);
                     LogMessage($"Paramètre '{Indice_3DTxt}' créé.", System.Drawing.Color.Green);
+                    SmartText Indice_3DSmartTxt = new SmartText(Indice3DParameter);
+                    ElementId Indice_3DSmartTxtId = TSH.Parameters.PublishText(currentDoc.DocId, Indice_3DTxt, Indice_3DSmartTxt);
+                    TSH.Elements.SetName(Indice_3DSmartTxtId, Indice_3DTxt);
+                    LogMessage($"Paramètre '{Indice_3DTxt}' publié.", System.Drawing.Color.Green);
+
                 }
                 else
                 {
@@ -2362,15 +2351,16 @@ namespace iFixInvalidity
 
                 if (DesignationExiste == ElementId.Empty)
                 {
-                    // Démarre la modification dans l'application TopSolid
-                    //if (!TopSolidHost.Application.StartModification("My Action", false)) return;
-                    // Création du paramètre "Designation"
                     ElementId DesignationParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
                     TSH.Elements.SetName(DesignationParam, DesignationTxt);
+                    TSH.Elements.SetDescription(DesignationParam, DesignationTxt);
                     DesignationCreated = true;
-                    //TopSolidHost.Documents.EnsureIsDirty(ref currentDocID);
-                    //TopSolidHost.Application.EndModification(true, true);
                     LogMessage($"Paramètre '{DesignationTxt}' créé.", System.Drawing.Color.Green);
+                    SmartText DesignationSmartTxt = new SmartText(DesignationParam);
+                    ElementId DesignationSmartTxtId = TSH.Parameters.PublishText(currentDoc.DocId, DesignationTxt, DesignationSmartTxt);
+                    TSH.Elements.SetName(DesignationSmartTxtId, DesignationTxt);
+                    LogMessage($"Paramètre '{DesignationTxt}' publié.", System.Drawing.Color.Green);
+
                 }
                 else
                 {
@@ -2381,15 +2371,16 @@ namespace iFixInvalidity
                 {
                     if (currentDoc.DocIsElectrode || iselectrode)
                     {
-                        // Démarre la modification dans l'application TopSolid
-                        //if (!TopSolidHost.Application.StartModification("My Action", false)) return;
-                        // Création du paramètre "Nom_elec"
                         ElementId Nom_ElecParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
                         TSH.Elements.SetName(Nom_ElecParam, Nom_ElecTxt);
+                        TSH.Elements.SetDescription(Nom_ElecParam, Nom_ElecTxt);
                         Nom_ElecCreated = true;
-                        //TopSolidHost.Documents.EnsureIsDirty(ref currentDocID);
-                        //TopSolidHost.Application.EndModification(true, true);
                         LogMessage($"Paramètre '{Nom_ElecTxt}' créé.", System.Drawing.Color.Green);
+                        SmartText Nom_ElecSmartTxt = new SmartText(Nom_ElecParam);
+                        ElementId Nom_ElecSmartTxtId = TSH.Parameters.PublishText(currentDoc.DocId, Nom_ElecTxt, Nom_ElecSmartTxt);
+                        TSH.Elements.SetName(Nom_ElecSmartTxtId, Nom_ElecTxt);
+                        LogMessage($"Paramètre '{Nom_ElecTxt}' publié.", System.Drawing.Color.Green);
+
                     }
                     else
                     {
@@ -2409,15 +2400,16 @@ namespace iFixInvalidity
                         {
                             if (currentDoc.DocIsElectrode || iselectrode)
                             {
-                                // Démarre la modification dans l'application TopSolid
-                                //if (!TopSolidHost.Application.StartModification("My Action", false)) return;
-                                // Création du paramètre "Total brut"
                                 ElementId TotalBrutParam = TSH.Parameters.CreateSmartIntegerParameter(currentDoc.DocId, new SmartInteger(0));
                                 TSH.Elements.SetName(TotalBrutParam, TotalBrutTxt);
+                                TSH.Elements.SetDescription(TotalBrutParam, TotalBrutTxt);
                                 TotalBrutCreated = true;
-                                //TopSolidHost.Documents.EnsureIsDirty(ref currentDocID);
-                                //TopSolidHost.Application.EndModification(true, true);
                                 LogMessage($"Paramètre '{TotalBrutTxt}' créé.", System.Drawing.Color.Green);
+                                SmartInteger TotalBrutSmartTxt = new SmartInteger(TotalBrutParam);
+                                ElementId TotalBrutSmartTxtId = TSH.Parameters.PublishInteger(currentDoc.DocId, Indice_3DTxt, TotalBrutSmartTxt);
+                                TSH.Elements.SetName(TotalBrutSmartTxtId, TotalBrutTxt);
+                                LogMessage($"Paramètre '{TotalBrutTxt}' publié.", System.Drawing.Color.Green);
+
                             }
                             else
                             {
@@ -2454,7 +2446,6 @@ namespace iFixInvalidity
                                 bool derivé = TSHD.Tools.IsDerived(currentDoc.DocId);
                                 if (derivé)
                                 {
-                                    // Création du paramètre "OP" pour un document dérivé
                                     ElementId OPParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
                                     TSH.Elements.SetName(OPParam, OPIdTxt);
                                     OPIdCreated = true;
@@ -2464,16 +2455,9 @@ namespace iFixInvalidity
                                 {
                                     if (OPExiste == ElementId.Empty)
                                     {
-                                        // Démarre la modification dans l'application TopSolid
-                                        //if (!TopSolidHost.Application.StartModification("My Action", false)) return;
-                                        // Création du paramètre "OP" pour un document dérivé
                                         ElementId OPParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText("1"));
-                                        // Publication du paramètre "OP"
                                         TSH.Elements.SetName(OPParam, OPIdTxt);
-                                        //OPParam = TSH.Parameters.PublishText(currentDoc.DocId, OPIdTxt, new SmartText("1"));
                                         OPIdCreated = true;
-                                        //TopSolidHost.Documents.EnsureIsDirty(ref currentDocID);
-                                        //TopSolidHost.Application.EndModification(true, true);
                                         LogMessage($"Paramètre '{OPIdTxt}' créé.", System.Drawing.Color.Green);
                                     }
                                 }
@@ -2482,14 +2466,9 @@ namespace iFixInvalidity
                             {
                                 if (OPExiste == ElementId.Empty)
                                 {
-                                    // Démarre la modification dans l'application TopSolid
-                                    //if (!TopSolidHost.Application.StartModification("My Action", false)) return;
-                                    // Création du paramètre "OP" pour un document de type ".TopMillTurn"
                                     ElementId OPParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
                                     TSH.Elements.SetName(OPParam, OPIdTxt);
                                     OPIdCreated = true;
-                                    //TopSolidHost.Documents.EnsureIsDirty(ref currentDocID);
-                                    //TopSolidHost.Application.EndModification(true, true);
                                     LogMessage($"Paramètre '{OPIdTxt}' créé.", System.Drawing.Color.Green);
                                 }
                                 else
@@ -2516,34 +2495,15 @@ namespace iFixInvalidity
                         {
                             if (Nom_ElecExiste == ElementId.Empty)
                             {
-                                // Démarre la modification dans l'application TopSolid
-                                //if (!TopSolidHost.Application.StartModification("My Action", false)) return;
-                                // Création du paramètre "Nom_elec" pour un document de type ".TopNewPrtSet"
                                 ElementId Nom_ElecParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
                                 TSH.Elements.SetName(Nom_ElecParam, Nom_ElecTxt);
                                 Nom_ElecCreated = true;
-                                //TopSolidHost.Documents.EnsureIsDirty(ref currentDocID);
-                                //// Finalisation de la modification
-                                //TopSolidHost.Application.EndModification(true, true);
                                 LogMessage($"Paramètre '{Nom_ElecTxt}' créé.", System.Drawing.Color.Green);
                             }
                             else
                             {
                                 LogMessage($"Paramètre '{Nom_ElecTxt}' existe déjà.", System.Drawing.Color.Black);
                             }
-
-                            //if (Nom_docuExiste == ElementId.Empty)
-                            //{
-                            //    // Création du paramètre "Nom_docu" pour un document de type ".TopNewPrtSet"
-                            //    ElementId Nom_DocuParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
-                            //    TSH.Elements.SetName(Nom_DocuParam, NomDocuTxt);
-                            //    NomDocuCreated = true;
-                            //    LogMessage($"Paramètre '{NomDocuTxt}' créé.", System.Drawing.Color.Green);
-                            //}
-                            //else
-                            //{
-                            //    LogMessage($"Paramètre '{NomDocuTxt}' existe déjà.", System.Drawing.Color.Black);
-                            //}
                         }
 
                         MessageConfirmation(Indice_3DCreated, DesignationCreated, CommentaireCreated, OPIdCreated, Nom_ElecCreated, TotalBrutCreated, NomDocuCreated, Indice_3DTxt, DesignationTxt, CommentaireTxt, OPIdTxt, Nom_ElecTxt, TotalBrutTxt, NomDocuTxt);
@@ -2573,45 +2533,45 @@ namespace iFixInvalidity
                 TopSolidHost.Application.EndModification(true, true);
             }
 
-            string numMouleTxt = "Moule";
-            bool numMouleCreated = false;
-            ElementId numMouleExiste = TSH.Elements.SearchByName(currentDoc.DocId, numMouleTxt);
+            //string numMouleTxt = "Moule";
+            //bool numMouleCreated = false;
+            //ElementId numMouleExiste = TSH.Elements.SearchByName(currentDoc.DocId, numMouleTxt);
 
 
-            try
-            {
-                if (numMouleExiste == ElementId.Empty)
-                {
-                    // Démarre la modification dans l'application TopSolid
-                    if (!TopSolidHost.Application.StartModification("My Action", false)) return;
+            //try
+            //{
+            //    if (numMouleExiste == ElementId.Empty)
+            //    {
+            //        // Démarre la modification dans l'application TopSolid
+            //        if (!TopSolidHost.Application.StartModification("My Action", false)) return;
 
-                    // Assure que le document est marqué comme modifié
-                    PdmObjectId ProjetPdmId = TSH.Pdm.GetProject(currentDoc.DocPdmObject);
-                    DocumentId projetDocumentId = TSH.Documents.GetDocument(ProjetPdmId);
-                    TopSolidHost.Documents.EnsureIsDirty(ref projetDocumentId);
-                    ElementId nomProjetId = TSH.Parameters.GetNameParameter(projetDocumentId);
-                    var numMouleParameter = TSH.Parameters.CreateTextRelayedParameter(currentDoc.DocId, nomProjetId, ParameterRelayType.Project);
+            //        // Assure que le document est marqué comme modifié
+            //        PdmObjectId ProjetPdmId = TSH.Pdm.GetProject(currentDoc.DocPdmObject);
+            //        DocumentId projetDocumentId = TSH.Documents.GetDocument(ProjetPdmId);
+            //        TopSolidHost.Documents.EnsureIsDirty(ref projetDocumentId);
+            //        ElementId nomProjetId = TSH.Parameters.GetNameParameter(projetDocumentId);
+            //        var numMouleParameter = TSH.Parameters.CreateTextRelayedParameter(currentDoc.DocId, nomProjetId, ParameterRelayType.Project);
 
-                    numMouleCreated = true;
-                    // Marquer le document comme modifié
-                    //TopSolidHost.Documents.EnsureIsDirty(ref currentDocID);
-                    //TopSolidHost.Application.EndModification(true, true);
-                    LogMessage($"Paramètre '{numMouleTxt}' créé.", System.Drawing.Color.Green);
-                    TopSolidHost.Documents.EnsureIsDirty(ref currentDocID); // juste avant EndModification
-                    TopSolidHost.Application.EndModification(true, true);
-                }
-                else
-                {
-                    LogMessage($"Paramètre '{numMouleTxt}' existe déjà.", System.Drawing.Color.Black);
-                }
-            }
-            catch (Exception ex)
-            {
-                // Log et affichage d'une erreur en cas d'exception
-                LogMessage($"Erreur : {ex.Message}", System.Drawing.Color.Red);
-                MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                TopSolidHost.Application.EndModification(false, false);
-            }
+            //        numMouleCreated = true;
+            //        // Marquer le document comme modifié
+            //        //TopSolidHost.Documents.EnsureIsDirty(ref currentDocID);
+            //        //TopSolidHost.Application.EndModification(true, true);
+            //        LogMessage($"Paramètre '{numMouleTxt}' créé.", System.Drawing.Color.Green);
+            //        TopSolidHost.Documents.EnsureIsDirty(ref currentDocID); // juste avant EndModification
+            //        TopSolidHost.Application.EndModification(true, true);
+            //    }
+            //    else
+            //    {
+            //        LogMessage($"Paramètre '{numMouleTxt}' existe déjà.", System.Drawing.Color.Black);
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    // Log et affichage d'une erreur en cas d'exception
+            //    LogMessage($"Erreur : {ex.Message}", System.Drawing.Color.Red);
+            //    MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            //    TopSolidHost.Application.EndModification(false, false);
+            //}
 
 
             #endregion
