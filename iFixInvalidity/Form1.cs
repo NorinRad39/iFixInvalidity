@@ -31,6 +31,7 @@ namespace iFixInvalidity
         #region Champs privés / propriétés
         public object TopSolidDesign { get; private set; }
 
+       
         Document currentDoc;
         DocumentId docMaster = DocumentId.Empty;
         DocumentId prepaDocument = DocumentId.Empty;
@@ -40,8 +41,7 @@ namespace iFixInvalidity
         public Form1()
         {
             InitializeComponent();
-            ConnectToTopSolid(); // Connexion à TopSolid au lancement de l'application
-            ConnectToTopSolidDesignHost();
+            connexion();    
             ConnectToTopSolidElectrodeHost();
 
             // Initialisation de currentDoc avec l'instance actuelle de Form1
@@ -60,90 +60,11 @@ namespace iFixInvalidity
         #endregion
 
         #region Connexions TopSolid
-        //Connexion a topsolid
-        private void ConnectToTopSolid()
+        private void connexion()
         {
-            try
-            {
-                // Vérifier si la connexion est déjà établie
-                if (!TSH.IsConnected)
-                {
-                    // Connexion à TopSolid avec un paramètre d'initialisation (si nécessaire)
-                    TSH.Connect();
+            StartConnect startConnect = new StartConnect();
+            startConnect.ConnectionTopsolid();
 
-                    // Vérifier à nouveau si la connexion est réussie
-                    if (TSH.IsConnected)
-                    {
-                        LogMessage("Connexion réussie à TopSolid.", System.Drawing.Color.Green);
-                        // MessageBox.Show("Connexion réussie à TopSolid.", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                    else
-                    {
-                        LogMessage("Connexion échouée à TopSolid.", System.Drawing.Color.Red);
-                        MessageBox.Show("Connexion échouée à TopSolid.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-                else
-                {
-                    LogMessage("TopSolid est déjà connecté.", System.Drawing.Color.Orange);
-                    MessageBox.Show("TopSolid est déjà connecté.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-            }
-            catch (InvalidOperationException ex)
-            {
-                // Gérer une exception spécifique si nécessaire
-                LogMessage($"Problème opérationnel : {ex.Message}", System.Drawing.Color.Red);
-                MessageBox.Show($"Problème opérationnel : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            catch (Exception ex)
-            {
-                // Gérer d'autres exceptions
-                LogMessage($"Erreur lors de la connexion à TopSolid : {ex.Message}", System.Drawing.Color.Red);
-                MessageBox.Show($"Erreur lors de la connexion à TopSolid : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        //Connexion a topsolid design
-        private void ConnectToTopSolidDesignHost()
-        {
-            try
-            {
-                // Vérifier si la connexion est déjà établie
-                if (!TopSolidDesignHost.IsConnected)
-                {
-                    // Connexion à TopSolid avec un paramètre d'initialisation (si nécessaire)
-                    TopSolidDesignHost.Connect();
-
-                    // Vérifier à nouveau si la connexion est réussie
-                    if (TopSolidDesignHost.IsConnected)
-                    {
-                        LogMessage("Connexion réussie à TopSolid module design.", System.Drawing.Color.Green);
-                        // MessageBox.Show("Connexion réussie à TopSolid module design.", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                    else
-                    {
-                        LogMessage("Connexion échouée à TopSolid module design.", System.Drawing.Color.Red);
-                        MessageBox.Show("Connexion échouée à TopSolid module design.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-                else
-                {
-                    LogMessage("TopSolid module design est déjà connecté.", System.Drawing.Color.Orange);
-                    MessageBox.Show("TopSolid module design est déjà connecté.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-            }
-            catch (InvalidOperationException ex)
-            {
-                // Gérer une exception spécifique si nécessaire
-                LogMessage($"Problème opérationnel : {ex.Message}", System.Drawing.Color.Red);
-                MessageBox.Show($"Problème opérationnel : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            catch (Exception ex)
-            {
-                // Gérer d'autres exceptions
-                LogMessage($"Erreur lors de la connexion à TopSolid module design : {ex.Message}", System.Drawing.Color.Red);
-                MessageBox.Show($"Erreur lors de la connexion à TopSolid module design : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
         }
 
         //Connexion a top electrode
