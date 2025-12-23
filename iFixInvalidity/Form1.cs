@@ -963,8 +963,15 @@ namespace iFixInvalidity
             currentDoc = DocumentCourant();
             try
             {
-                // Marquer le document comme modifié
-                TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
+                // Sécurisation de la ligne pour éviter un appel inutile si currentDoc est vide
+                if (currentDoc != DocumentId.Empty)
+                {
+                    TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
+                }
+                if (docMaster != DocumentId.Empty)
+                {
+                    TopSolidHost.Documents.EnsureIsDirty(ref docMaster);
+                }
 
                 // Traitement des opérations
                 foreach (ElementId operation in operations)
