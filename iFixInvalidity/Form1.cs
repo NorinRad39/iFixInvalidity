@@ -891,30 +891,25 @@ namespace iFixInvalidity
             List<ElementId> operations = TSH.Operations.GetOperations(currentDoc);
             if (operations == null)
             {
-                // Log en rouge si les opérations ne peuvent pas être récupérées
                 LogMessage("Erreur : Impossible de récupérer les opérations.", System.Drawing.Color.Red);
                 MessageBox.Show("Erreur : Impossible de récupérer les opérations.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
             // Initialisation de la liste des paramètres électrodes
-            List<ElementId> paramElecList = new List<ElementId>();
-            string nom = "";
-
             ElementId nomElecOriginal = new ElementId();
             bool isElectrode = Iselectrode(currentDoc);
 
             if (isElectrode)
             {
                 nomElecOriginal = TSH.Parameters.GetNameParameter(currentDoc);
-                LogMessage($"Paramètre Nom_elec trouvé.", System.Drawing.Color.Green); // Succès en vert
+                LogMessage($"Paramètre Nom_elec trouvé.", System.Drawing.Color.Green);
             }
 
             // Recherche des éléments nécessaires
             ElementId nomDocu = TSH.Elements.SearchByName(currentDoc, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeName");
             ElementId designationPiece = TSH.Elements.SearchByName(currentDoc, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeDescription");
             ElementId indice3DElec = TSH.Elements.SearchByName(currentDoc, "Indice Elec");
-            ElementId TotalBrutId = SearchParamByName(currentDoc, "Total brut");
 
             // Fonction Total brut
             int TotalBrut = TotalBrutCalcul(currentDoc);
@@ -927,22 +922,10 @@ namespace iFixInvalidity
             SmartInteger TotalBrutSmart = new SmartInteger(TotalBrut);
 
             // Si les éléments sont trouvés, on crée les objets SmartText
-            if (nomDocu != ElementId.Empty)
-            {
-                nomDocuSmart = CreateSmartTxt(nomDocu);
-            }
-            if (nomElecOriginal != ElementId.Empty)
-            {
-                nomElecSmart = CreateSmartTxt(nomElecOriginal);
-            }
-            if (designationPiece != ElementId.Empty)
-            {
-                designationPieceSmart = CreateSmartTxt(designationPiece);
-            }
-            if (indice3DElec != ElementId.Empty)
-            {
-                indice3DElecSmart = CreateSmartTxt(indice3DElec);
-            }
+            if (nomDocu != ElementId.Empty) nomDocuSmart = CreateSmartTxt(nomDocu);
+            if (nomElecOriginal != ElementId.Empty) nomElecSmart = CreateSmartTxt(nomElecOriginal);
+            if (designationPiece != ElementId.Empty) designationPieceSmart = CreateSmartTxt(designationPiece);
+            if (indice3DElec != ElementId.Empty) indice3DElecSmart = CreateSmartTxt(indice3DElec);
 
             // Tableau des SmartText
             SmartText[] SmartTxtTable = new SmartText[4];
@@ -954,81 +937,114 @@ namespace iFixInvalidity
             // Tentative de démarrer la modification
             if (!TopSolidHost.Application.StartModification("My Action", false))
             {
-                // Log en rouge si la modification ne peut pas commencer
                 LogMessage("Erreur : Impossible de démarrer la modification.", System.Drawing.Color.Red);
                 MessageBox.Show("Erreur : Impossible de démarrer la modification.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
             currentDoc = DocumentCourant();
+            bool masterWasOpen = false;
+
             try
             {
-                // Sécurisation de la ligne pour éviter un appel inutile si currentDoc est vide
+                // 1. Marquer l'électrode comme modifiable
                 if (currentDoc != DocumentId.Empty)
                 {
                     TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
                 }
+
+                // 2. Gestion du document maître (Assemblage) - CORRECTION VALIDÉE
+                // Nécessaire car l'électrode propage ses infos vers l'assemblage.
                 if (docMaster != DocumentId.Empty)
                 {
+                    // Vérifier si le document maître est déjà ouvert
+                    List<DocumentId> openDocs = TopSolidHost.Documents.GetOpenDocuments();
+                    masterWasOpen = openDocs.Contains(docMaster);
+
+                    // Si le master n'est pas ouvert, on l'ouvre pour permettre la modification
+                    if (!masterWasOpen)
+                    {
+                        TopSolidHost.Documents.Open(ref docMaster);
+                        LogMessage("Document maître ouvert automatiquement pour permettre la synchronisation.", System.Drawing.Color.Orange);
+                    }
+
+                    // On marque le master comme Dirty pour accepter les changements propagés
                     TopSolidHost.Documents.EnsureIsDirty(ref docMaster);
+                    LogMessage("Document maître marqué 'Dirty'.", System.Drawing.Color.Black);
                 }
 
                 // Traitement des opérations
+                string nom = "";
                 foreach (ElementId operation in operations)
                 {
                     try
                     {
-                        // Récupération du nom de l'opération
                         nom = TSH.Elements.GetFriendlyName(operation);
                     }
                     catch (Exception ex)
                     {
-                        // Log en rouge en cas d'erreur lors de la récupération du nom
-                        LogMessage("Erreur : Impossible de récupérer le nom des paramètres électrode. " + ex.Message, System.Drawing.Color.Red);
-                        MessageBox.Show("Erreur : Impossible de récupérer le nom des paramètres électrode. " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        LogMessage("Erreur lecture nom opération : " + ex.Message, System.Drawing.Color.Red);
                         continue;
                     }
 
-                    // Vérification du nom pour appliquer les paramètres correspondants
                     if (nom == CommentaireOp)
                     {
                         TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[0]);
-                        LogMessage($"Paramètre '{CommentaireOp}' appliqué avec succès.", System.Drawing.Color.Green); // Succès en vert
-                        
+                        LogMessage($"Paramètre '{CommentaireOp}' appliqué.", System.Drawing.Color.Green);
                     }
                     else if (nom == DesignationOp)
                     {
                         TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[2]);
-                        LogMessage($"Paramètre '{DesignationOp}' appliqué avec succès.", System.Drawing.Color.Green); // Succès en vert
+                        LogMessage($"Paramètre '{DesignationOp}' appliqué.", System.Drawing.Color.Green);
                     }
                     else if (nom == Indice_3DOp)
                     {
                         TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[3]);
-                        LogMessage($"Paramètre '{Indice_3DOp}' appliqué avec succès.", System.Drawing.Color.Green); // Succès en vert
+                        LogMessage($"Paramètre '{Indice_3DOp}' appliqué.", System.Drawing.Color.Green);
                     }
                     else if (nom == Nom_elecTxt)
                     {
                         TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[1]);
-                        LogMessage($"Paramètre '{Nom_elecTxt}' appliqué avec succès.", System.Drawing.Color.Green); // Succès en vert
+                        LogMessage($"Paramètre '{Nom_elecTxt}' appliqué.", System.Drawing.Color.Green);
                     }
                     else if (nom == TotalBrutTxt)
                     {
                         TSH.Parameters.SetSmartIntegerParameterCreation(operation, TotalBrutSmart);
-                        LogMessage($"Paramètre '{TotalBrutTxt}' appliqué avec succès.", System.Drawing.Color.Green); // Succès en vert
+                        LogMessage($"Paramètre '{TotalBrutTxt}' appliqué.", System.Drawing.Color.Green);
                     }
                 }
 
                 // Finalisation de la modification
                 TopSolidHost.Application.EndModification(true, true);
-                LogMessage("Modification terminée avec succès.", System.Drawing.Color.Green); // Succès en vert
+                LogMessage("Modification terminée avec succès.", System.Drawing.Color.Green);
+
+                // 3. Gestion de la fermeture du document maître et restauration du document courant
+                if (docMaster != DocumentId.Empty && !masterWasOpen)
+                {
+                    // Si le document maître n'était pas ouvert, on le referme en sauvegardant
+                    TopSolidHost.Documents.Close(docMaster, true, true);
+                    LogMessage("Document maître refermé et sauvegardé.", System.Drawing.Color.Black);
+                }
+
+                // Restauration du document électrode comme document courant
+                if (currentDoc != DocumentId.Empty)
+                {
+                    TopSolidHost.Documents.Open(ref currentDoc);
+                    LogMessage("Retour au document électrode.", System.Drawing.Color.Black);
+                }
             }
             catch (Exception ex)
             {
-                // Log en rouge en cas d'erreur lors de la modification
-                LogMessage("Erreur : Une erreur s'est produite lors de la modification. " + ex.Message, System.Drawing.Color.Red);
-                MessageBox.Show("Erreur : Une erreur s'est produite lors de la modification. " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                // Annuler la modification en cas d'erreur
+                // Annuler la modification en cas d'erreur pour ne pas laisser l'état instable
                 TopSolidHost.Application.EndModification(false, false);
+                LogMessage("Erreur critique lors de la modification : " + ex.Message, System.Drawing.Color.Red);
+                MessageBox.Show("Erreur critique : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                // Tenter de restaurer le document courant même en cas d'erreur
+                if (currentDoc != DocumentId.Empty)
+                {
+                    try { TopSolidHost.Documents.Open(ref currentDoc); } catch { }
+                }
             }
         }
 
@@ -2032,8 +2048,9 @@ namespace iFixInvalidity
                         // Gestion du document maître
                         if (docMaster != DocumentId.Empty)
                         {
-                            string docMasterName = TSH.Documents.GetName(docMaster);
-                            LogMessage($"Document maître trouvé : {docMasterName}", System.Drawing.Color.Black);
+                            // On tente d'ouvrir le document maître sans vérifier s'il est déjà ouvert
+                            TopSolidHost.Documents.Open(ref docMaster);
+                            LogMessage("Document maître ouvert automatiquement pour permettre la synchronisation.", System.Drawing.Color.Orange);
                         }
                         else
                         {
