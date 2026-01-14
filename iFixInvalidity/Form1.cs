@@ -41,17 +41,80 @@ namespace iFixInvalidity
         public Form1()
         {
             InitializeComponent();
-            connexion();    
-            ConnectToTopSolidElectrodeHost();
 
-            // Initialisation de currentDoc avec l'instance actuelle de Form1
-            currentDoc = new Document();
+            // Abonnement à l'événement Shown pour lancer la connexion APRES l'affichage de la fenêtre
+            this.Shown += Form1_Shown;
 
-            currentDoc.DocId = TSH.Documents.EditedDocument;
-            DisplayDocumentName(currentDoc.DocNomTxt);
-            DisplayMasterDocumentName();
-            // Récupération du document maître et du document de préparation
-            (prepaDocument, docMaster) = RecupDocuMaster(currentDoc.DocId);
+            // AJOUT : Abonnement à l'événement de fermeture pour gérer la déconnexion
+            this.FormClosing += Form1_FormClosing;
+        }
+
+        // AJOUT : Méthode pour gérer la déconnexion propre
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            try
+            {
+                LogMessage("Déconnexion de TopSolid...", System.Drawing.Color.Black);
+
+                // Déconnexion du module Electrode si connecté
+                if (TopSolidElectrodeHost.IsConnected)
+                {
+                    TopSolidElectrodeHost.Disconnect();
+                }
+
+                // Déconnexion du Host principal si connecté
+                if (TopSolidHost.IsConnected)
+                {
+                    TopSolidHost.Disconnect();
+                }
+            }
+            catch (Exception ex)
+            {
+                // On log mais on ne bloque pas la fermeture
+                Debug.WriteLine($"Erreur lors de la déconnexion : {ex.Message}");
+            }
+        }
+
+        private void Form1_Shown(object sender, EventArgs e)
+        {
+            // Changement du curseur pour indiquer un chargement
+            Cursor.Current = Cursors.WaitCursor;
+            System.Windows.Forms.Application.DoEvents(); // Force le rafraîchissement de l'interface pour afficher la fenêtre
+
+            try
+            {
+                LogMessage("Démarrage de la connexion...", System.Drawing.Color.Black);
+
+                connexion();
+                ConnectToTopSolidElectrodeHost();
+
+                // Initialisation de currentDoc avec l'instance actuelle de Form1
+                currentDoc = new Document();
+
+                currentDoc.DocId = TSH.Documents.EditedDocument;
+
+                // Vérification si un document est ouvert avant d'afficher
+                if (currentDoc.DocId != DocumentId.Empty)
+                {
+                    DisplayDocumentName(currentDoc.DocNomTxt);
+                    DisplayMasterDocumentName();
+                    // Récupération du document maître et du document de préparation
+                    (prepaDocument, docMaster) = RecupDocuMaster(currentDoc.DocId);
+                }
+                else
+                {
+                    LogMessage("Aucun document TopSolid actif détecté.", System.Drawing.Color.Orange);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Erreur au démarrage : {ex.Message}", System.Drawing.Color.Red);
+            }
+            finally
+            {
+                // Rétablissement du curseur normal
+                Cursor.Current = Cursors.Default;
+            }
         }
         #endregion
 
@@ -1889,7 +1952,9 @@ namespace iFixInvalidity
         //Bouton quiter-----------------------------------------------------------------------------------------------------------
         private void quitToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Environment.Exit(0);
+            // MODIFICATION : Utiliser Application.Exit() pour déclencher l'événement FormClosing
+            // Environment.Exit(0); // Tuer le processus est trop brutal
+            System.Windows.Forms.Application.Exit();
         }
 
         //Bouton invok
@@ -1997,12 +2062,26 @@ namespace iFixInvalidity
                                     return;
                                 }
 
-                                currentDoc.DocId = DocumentCourant();
-                                DocumentId currentDocId = currentDoc.DocId;
-
                                 try
                                 {
-                                    TopSolidHost.Documents.EnsureIsDirty(ref currentDocId);
+                                    currentDoc.DocId = DocumentCourant();
+                                    DocumentId currentDocId = currentDoc.DocId;
+
+                                    if (currentDocId != DocumentId.Empty)
+                                    {
+                                        // Sécurisation : on rafraîchit l'ID du document courant depuis le PDM
+                                        // pour être sûr de manipuler la dernière version chargée en mémoire
+                                        currentDoc.DocId = DocumentCourant();
+                                        DocumentId currentDocID = currentDoc.DocId;
+                                        TopSolidHost.Documents.EnsureIsDirty(ref currentDocId);
+                                    }
+                                    if (docMaster != DocumentId.Empty)
+                                    {
+                                        // Rappel du document maître pour obtenir le dernier identifiant (révision à jour)
+                                        PdmObjectId pdmMaster = TopSolidHost.Documents.GetPdmObject(docMaster);
+                                        docMaster = TopSolidHost.Documents.GetDocument(pdmMaster);
+                                        TopSolidHost.Documents.EnsureIsDirty(ref docMaster);
+                                    }
                                     TSH.Operations.MoveOperation(operationDossierType, parentOperationProprieteElec, positionCible);
                                     TSH.Documents.Update(currentDoc.DocId, true);
                                     TopSolidHost.Application.EndModification(true, true);
