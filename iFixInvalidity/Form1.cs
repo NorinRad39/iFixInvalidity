@@ -241,6 +241,10 @@ namespace iFixInvalidity
                                         if (instanceDocument != DocumentId.Empty)
                                         {
                                             docMaster = instanceDocument;
+
+                                            // AJOUT : Mise à jour vers la dermière révision
+                                            docMaster = GetLastRevisionDoc(docMaster);
+
                                             return (prepaDocument, docMaster);
                                         }
                                     }
@@ -287,12 +291,39 @@ namespace iFixInvalidity
                 if (result.docMaster != DocumentId.Empty)
                 {
                     docMaster = result.docMaster;
+
+                    // AJOUT : Mise à jour vers la dermière révision
+                    docMaster = GetLastRevisionDoc(docMaster);
+
                     return (prepaDocument, docMaster);
                 }
             }
 
             // Retourner les valeurs par défaut si aucun document maître ou de prépa n'a été trouvé
             return (prepaDocument, docMaster);
+        }
+
+        // Fonction utilitaire pour récupérer l'ID de la dernière révision mineure de la dernière majeure
+        private DocumentId GetLastRevisionDoc(DocumentId docId)
+        {
+            if (docId == DocumentId.Empty) return DocumentId.Empty;
+            try
+            {
+                // Récupère l'objet PDM
+                PdmObjectId pdmObject = TSH.Documents.GetPdmObject(docId);
+
+                // Récupère l'ID de la dernière révision (méthode demandée)
+                PdmMinorRevisionId finalRevision = TSH.Pdm.GetFinalMinorRevision(pdmObject);
+
+                // Retourne le DocumentId correspondant à cette révision précise
+                return TopSolidHost.Documents.GetMinorRevisionDocument(finalRevision);
+            }
+            catch (Exception ex)
+            {
+                // En cas d'erreur (ex: document non PDM), on retourne l'original
+                LogMessage($"Info: Impossible de récupérer la dernière révision pour {docId} : {ex.Message}", System.Drawing.Color.Orange);
+                return docId;
+            }
         }
 
         // Récupère la liste des opérations d'un document
@@ -898,7 +929,18 @@ namespace iFixInvalidity
                             );
 
                             // Marquer le document comme modifié
-                            TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
+                            // Sécurisation de la ligne pour éviter un appel inutile si currentDoc est vide
+                            if (currentDoc != DocumentId.Empty)
+                            {
+                                TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
+                            }
+                            if (docMaster != DocumentId.Empty)
+                            {
+                                // AJOUT : Mise à jour vers la dermière révision AVANT de rendre Dirty
+                                docMaster = GetLastRevisionDoc(docMaster);
+
+                                TopSolidHost.Documents.EnsureIsDirty(ref docMaster);
+                            }
 
                             // Finaliser la modification
                             TopSolidHost.Application.EndModification(true, true);
@@ -2077,9 +2119,13 @@ namespace iFixInvalidity
                                     }
                                     if (docMaster != DocumentId.Empty)
                                     {
-                                        // Rappel du document maître pour obtenir le dernier identifiant (révision à jour)
+                                        // AJOUT : Mise à jour vers la dermière révision
+                                        docMaster = GetLastRevisionDoc(docMaster);
+
+                                        // Rappel du document maître... (Code existant simplifié)
                                         PdmObjectId pdmMaster = TopSolidHost.Documents.GetPdmObject(docMaster);
                                         docMaster = TopSolidHost.Documents.GetDocument(pdmMaster);
+
                                         TopSolidHost.Documents.EnsureIsDirty(ref docMaster);
                                     }
                                     TSH.Operations.MoveOperation(operationDossierType, parentOperationProprieteElec, positionCible);
