@@ -2018,6 +2018,7 @@ namespace iFixInvalidity
                 // Vérification si un document courant est sélectionné
                 if (currentDoc.DocId != DocumentId.Empty)
                 {
+
                     LogMessage($"Document courant : {currentDoc.DocNomTxt}", System.Drawing.Color.Black);
                 }
                 else
@@ -2113,8 +2114,8 @@ namespace iFixInvalidity
                                     {
                                         // Sécurisation : on rafraîchit l'ID du document courant depuis le PDM
                                         // pour être sûr de manipuler la dernière version chargée en mémoire
-                                        currentDoc.DocId = DocumentCourant();
-                                        DocumentId currentDocID = currentDoc.DocId;
+                                        currentDocId = GetLastRevisionDoc(currentDocId);
+                                        currentDoc.DocId = currentDocId;
                                         TopSolidHost.Documents.EnsureIsDirty(ref currentDocId);
                                     }
                                     if (docMaster != DocumentId.Empty)
