@@ -2594,7 +2594,7 @@ namespace iFixInvalidity
 
 
             #endregion
-
+             
         }
 
         #region Classe interne (placeholder)
