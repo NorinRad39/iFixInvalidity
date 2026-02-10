@@ -41,17 +41,80 @@ namespace iFixInvalidity
         public Form1()
         {
             InitializeComponent();
-            connexion();    
-            ConnectToTopSolidElectrodeHost();
 
-            // Initialisation de currentDoc avec l'instance actuelle de Form1
-            currentDoc = new Document();
+            // Abonnement à l'événement Shown pour lancer la connexion APRES l'affichage de la fenêtre
+            this.Shown += Form1_Shown;
 
-            currentDoc.DocId = TSH.Documents.EditedDocument;
-            DisplayDocumentName(currentDoc.DocNomTxt);
-            DisplayMasterDocumentName();
-            // Récupération du document maître et du document de préparation
-            (prepaDocument, docMaster) = RecupDocuMaster(currentDoc.DocId);
+            // AJOUT : Abonnement à l'événement de fermeture pour gérer la déconnexion
+            this.FormClosing += Form1_FormClosing;
+        }
+
+        // AJOUT : Méthode pour gérer la déconnexion propre
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            try
+            {
+                LogMessage("Déconnexion de TopSolid...", System.Drawing.Color.Black);
+
+                // Déconnexion du module Electrode si connecté
+                if (TopSolidElectrodeHost.IsConnected)
+                {
+                    TopSolidElectrodeHost.Disconnect();
+                }
+
+                // Déconnexion du Host principal si connecté
+                if (TopSolidHost.IsConnected)
+                {
+                    TopSolidHost.Disconnect();
+                }
+            }
+            catch (Exception ex)
+            {
+                // On log mais on ne bloque pas la fermeture
+                Debug.WriteLine($"Erreur lors de la déconnexion : {ex.Message}");
+            }
+        }
+
+        private void Form1_Shown(object sender, EventArgs e)
+        {
+            // Changement du curseur pour indiquer un chargement
+            Cursor.Current = Cursors.WaitCursor;
+            System.Windows.Forms.Application.DoEvents(); // Force le rafraîchissement de l'interface pour afficher la fenêtre
+
+            try
+            {
+                LogMessage("Démarrage de la connexion...", System.Drawing.Color.Black);
+
+                connexion();
+                ConnectToTopSolidElectrodeHost();
+
+                // Initialisation de currentDoc avec l'instance actuelle de Form1
+                currentDoc = new Document();
+
+                currentDoc.DocId = TSH.Documents.EditedDocument;
+
+                // Vérification si un document est ouvert avant d'afficher
+                if (currentDoc.DocId != DocumentId.Empty)
+                {
+                    DisplayDocumentName(currentDoc.DocNomTxt);
+                    DisplayMasterDocumentName();
+                    // Récupération du document maître et du document de préparation
+                    (prepaDocument, docMaster) = RecupDocuMaster(currentDoc.DocId);
+                }
+                else
+                {
+                    LogMessage("Aucun document TopSolid actif détecté.", System.Drawing.Color.Orange);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Erreur au démarrage : {ex.Message}", System.Drawing.Color.Red);
+            }
+            finally
+            {
+                // Rétablissement du curseur normal
+                Cursor.Current = Cursors.Default;
+            }
         }
         #endregion
 
@@ -178,6 +241,10 @@ namespace iFixInvalidity
                                         if (instanceDocument != DocumentId.Empty)
                                         {
                                             docMaster = instanceDocument;
+
+                                            // AJOUT : Mise à jour vers la dermière révision
+                                            docMaster = GetLastRevisionDoc(docMaster);
+
                                             return (prepaDocument, docMaster);
                                         }
                                     }
@@ -224,12 +291,39 @@ namespace iFixInvalidity
                 if (result.docMaster != DocumentId.Empty)
                 {
                     docMaster = result.docMaster;
+
+                    // AJOUT : Mise à jour vers la dermière révision
+                    docMaster = GetLastRevisionDoc(docMaster);
+
                     return (prepaDocument, docMaster);
                 }
             }
 
             // Retourner les valeurs par défaut si aucun document maître ou de prépa n'a été trouvé
             return (prepaDocument, docMaster);
+        }
+
+        // Fonction utilitaire pour récupérer l'ID de la dernière révision mineure de la dernière majeure
+        private DocumentId GetLastRevisionDoc(DocumentId docId)
+        {
+            if (docId == DocumentId.Empty) return DocumentId.Empty;
+            try
+            {
+                // Récupère l'objet PDM
+                PdmObjectId pdmObject = TSH.Documents.GetPdmObject(docId);
+
+                // Récupère l'ID de la dernière révision (méthode demandée)
+                PdmMinorRevisionId finalRevision = TSH.Pdm.GetFinalMinorRevision(pdmObject);
+
+                // Retourne le DocumentId correspondant à cette révision précise
+                return TopSolidHost.Documents.GetMinorRevisionDocument(finalRevision);
+            }
+            catch (Exception ex)
+            {
+                // En cas d'erreur (ex: document non PDM), on retourne l'original
+                LogMessage($"Info: Impossible de récupérer la dernière révision pour {docId} : {ex.Message}", System.Drawing.Color.Orange);
+                return docId;
+            }
         }
 
         // Récupère la liste des opérations d'un document
@@ -432,7 +526,15 @@ namespace iFixInvalidity
 
             try
             {
-                TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
+                if (currentDoc != DocumentId.Empty)
+                {
+                    // On s'assure que le document est modifiable (Dirty)
+                    TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
+                    // MODIFICATION : On récupère la dernière révision au lieu de simplement recharger le document courant
+                    currentDoc = GetLastRevisionDoc(currentDoc);
+                    
+
+                }
 
                 // Recherche des paramètres publiés dans le document courant
                 List<ElementId> ParameterPubliéList = TSH.Parameters.GetParameters(currentDoc);
@@ -658,6 +760,7 @@ namespace iFixInvalidity
             {
                 // Assurer que le document est marqué comme modifié et fin de la modification dans l'application
                 TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
+                currentDoc = GetLastRevisionDoc(currentDoc);
                 TopSolidHost.Application.EndModification(true, true);
             }
         }
@@ -835,7 +938,21 @@ namespace iFixInvalidity
                             );
 
                             // Marquer le document comme modifié
-                            TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
+                            // Sécurisation de la ligne pour éviter un appel inutile si currentDoc est vide
+                            if (currentDoc != DocumentId.Empty)
+                            {
+                                // On s'assure que le document est modifiable (Dirty)
+                                TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
+                                // MODIFICATION : On récupère la dernière révision au lieu de simplement recharger le document courant
+                                currentDoc = GetLastRevisionDoc(currentDoc);
+                            }
+                            if (docMaster != DocumentId.Empty)
+                            {
+                                // AJOUT : Mise à jour vers la dermière révision AVANT de rendre Dirty
+                                TopSolidHost.Documents.EnsureIsDirty(ref docMaster);
+                                docMaster = GetLastRevisionDoc(docMaster);
+
+                            }
 
                             // Finaliser la modification
                             TopSolidHost.Application.EndModification(true, true);
@@ -850,7 +967,7 @@ namespace iFixInvalidity
 
                             // Marquer le document comme modifié malgré l'erreur
                             TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
-
+                            currentDoc = GetLastRevisionDoc(currentDoc);
                             // Affichage de l'erreur à l'utilisateur
                             MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
@@ -878,6 +995,7 @@ namespace iFixInvalidity
         }
 
         //Configure les parametres des docus electrodes
+        //Configure les parametres des docus electrodes
         private void ParamElecListe(DocumentId currentDoc)
         {
             // Définition des paramètres de texte
@@ -887,155 +1005,94 @@ namespace iFixInvalidity
             const string Nom_elecTxt = "Paramètre texte (Nom elec)";
             const string TotalBrutTxt = "Paramètre entier (Total brut)";
 
-            // Récupération de la liste des opérations
-            List<ElementId> operations = TSH.Operations.GetOperations(currentDoc);
-            if (operations == null)
-            {
-                LogMessage("Erreur : Impossible de récupérer les opérations.", System.Drawing.Color.Red);
-                MessageBox.Show("Erreur : Impossible de récupérer les opérations.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            // Initialisation de la liste des paramètres électrodes
-            ElementId nomElecOriginal = new ElementId();
-            bool isElectrode = Iselectrode(currentDoc);
-
-            if (isElectrode)
-            {
-                nomElecOriginal = TSH.Parameters.GetNameParameter(currentDoc);
-                LogMessage($"Paramètre Nom_elec trouvé.", System.Drawing.Color.Green);
-            }
-
-            // Recherche des éléments nécessaires
-            ElementId nomDocu = TSH.Elements.SearchByName(currentDoc, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeName");
-            ElementId designationPiece = TSH.Elements.SearchByName(currentDoc, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeDescription");
-            ElementId indice3DElec = TSH.Elements.SearchByName(currentDoc, "Indice Elec");
-
-            // Fonction Total brut
-            int TotalBrut = TotalBrutCalcul(currentDoc);
-
-            // Initialisation des objets SmartText
-            SmartText nomDocuSmart = new SmartText("");
-            SmartText nomElecSmart = new SmartText("");
-            SmartText designationPieceSmart = new SmartText("");
-            SmartText indice3DElecSmart = new SmartText("");
-            SmartInteger TotalBrutSmart = new SmartInteger(TotalBrut);
-
-            // Si les éléments sont trouvés, on crée les objets SmartText
-            if (nomDocu != ElementId.Empty) nomDocuSmart = CreateSmartTxt(nomDocu);
-            if (nomElecOriginal != ElementId.Empty) nomElecSmart = CreateSmartTxt(nomElecOriginal);
-            if (designationPiece != ElementId.Empty) designationPieceSmart = CreateSmartTxt(designationPiece);
-            if (indice3DElec != ElementId.Empty) indice3DElecSmart = CreateSmartTxt(indice3DElec);
-
-            // Tableau des SmartText
-            SmartText[] SmartTxtTable = new SmartText[4];
-            SmartTxtTable[0] = nomDocuSmart;
-            SmartTxtTable[1] = nomElecSmart;
-            SmartTxtTable[2] = designationPieceSmart;
-            SmartTxtTable[3] = indice3DElecSmart;
-
             // Tentative de démarrer la modification
             if (!TopSolidHost.Application.StartModification("My Action", false))
             {
                 LogMessage("Erreur : Impossible de démarrer la modification.", System.Drawing.Color.Red);
-                MessageBox.Show("Erreur : Impossible de démarrer la modification.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            currentDoc = DocumentCourant();
-            bool masterWasOpen = false;
-
             try
             {
-                // 1. Marquer l'électrode comme modifiable
+                // 1. Mise à jour du document AVANT de chercher les éléments
+                currentDoc = DocumentCourant();
                 if (currentDoc != DocumentId.Empty)
                 {
+                    // Récupère la dernière révision
+                    currentDoc = GetLastRevisionDoc(currentDoc);
+                    // Rendra le document Dirty (modifiable)
                     TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
+                    // Par sécurité, on re-check la révision si EnsureIsDirty a changé l'ID
+                    currentDoc = GetLastRevisionDoc(currentDoc);
                 }
 
-                // 2. Gestion du document maître (Assemblage) - CORRECTION VALIDÉE
-                // Nécessaire car l'électrode propage ses infos vers l'assemblage.
                 if (docMaster != DocumentId.Empty)
                 {
-                    // Vérifier si le document maître est déjà ouvert
-                    List<DocumentId> openDocs = TopSolidHost.Documents.GetOpenDocuments();
-                    masterWasOpen = openDocs.Contains(docMaster);
-
-                    // Si le master n'est pas ouvert, on l'ouvre pour permettre la modification
-                    if (!masterWasOpen)
-                    {
-                        TopSolidHost.Documents.Open(ref docMaster);
-                        LogMessage("Document maître ouvert automatiquement pour permettre la synchronisation.", System.Drawing.Color.Orange);
-                    }
-
-                    // On marque le master comme Dirty pour accepter les changements propagés
+                    docMaster = GetLastRevisionDoc(docMaster);
                     TopSolidHost.Documents.EnsureIsDirty(ref docMaster);
-                    LogMessage("Document maître marqué 'Dirty'.", System.Drawing.Color.Black);
                 }
 
-                // Traitement des opérations
-                string nom = "";
+                // 2. MAINTENANT on récupère les éléments sur le document mis à jour
+
+                // Récupération de la liste des opérations (sur le doc à jour)
+                List<ElementId> operations = TSH.Operations.GetOperations(currentDoc);
+                if (operations == null) throw new Exception("Impossible de récupérer les opérations.");
+
+                ElementId nomElecOriginal = new ElementId();
+                if (Iselectrode(currentDoc))
+                {
+                    nomElecOriginal = TSH.Parameters.GetNameParameter(currentDoc);
+                }
+
+                ElementId nomDocu = TSH.Elements.SearchByName(currentDoc, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeName");
+                ElementId designationPiece = TSH.Elements.SearchByName(currentDoc, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeDescription");
+                ElementId indice3DElec = TSH.Elements.SearchByName(currentDoc, "Indice Elec");
+                // On recalcule le total brut sur le document à jour
+                int TotalBrut = TotalBrutCalcul(currentDoc);
+
+                // Initialisation des objets SmartText avec les IDs valides
+                SmartText nomDocuSmart = (nomDocu != ElementId.Empty) ? CreateSmartTxt(nomDocu) : new SmartText("");
+                SmartText nomElecSmart = (nomElecOriginal != ElementId.Empty) ? CreateSmartTxt(nomElecOriginal) : new SmartText("");
+                SmartText designationPieceSmart = (designationPiece != ElementId.Empty) ? CreateSmartTxt(designationPiece) : new SmartText("");
+                SmartText indice3DElecSmart = (indice3DElec != ElementId.Empty) ? CreateSmartTxt(indice3DElec) : new SmartText("");
+                SmartInteger TotalBrutSmart = new SmartInteger(TotalBrut);
+
+                // Tableau des SmartText
+                SmartText[] SmartTxtTable = new SmartText[4];
+                SmartTxtTable[0] = nomDocuSmart;
+                SmartTxtTable[1] = nomElecSmart;
+                SmartTxtTable[2] = designationPieceSmart;
+                SmartTxtTable[3] = indice3DElecSmart;
+
+                // 3. Traitement des opérations
                 foreach (ElementId operation in operations)
                 {
+                    string nom = "";
                     try
                     {
                         nom = TSH.Elements.GetFriendlyName(operation);
                     }
-                    catch (Exception ex)
-                    {
-                        LogMessage("Erreur lecture nom opération : " + ex.Message, System.Drawing.Color.Red);
-                        continue;
-                    }
+                    catch { continue; }
 
                     if (nom == CommentaireOp)
-                    {
                         TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[0]);
-                        LogMessage($"Paramètre '{CommentaireOp}' appliqué.", System.Drawing.Color.Green);
-                    }
                     else if (nom == DesignationOp)
-                    {
                         TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[2]);
-                        LogMessage($"Paramètre '{DesignationOp}' appliqué.", System.Drawing.Color.Green);
-                    }
                     else if (nom == Indice_3DOp)
-                    {
                         TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[3]);
-                        LogMessage($"Paramètre '{Indice_3DOp}' appliqué.", System.Drawing.Color.Green);
-                    }
                     else if (nom == Nom_elecTxt)
-                    {
                         TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[1]);
-                        LogMessage($"Paramètre '{Nom_elecTxt}' appliqué.", System.Drawing.Color.Green);
-                    }
                     else if (nom == TotalBrutTxt)
-                    {
                         TSH.Parameters.SetSmartIntegerParameterCreation(operation, TotalBrutSmart);
-                        LogMessage($"Paramètre '{TotalBrutTxt}' appliqué.", System.Drawing.Color.Green);
-                    }
                 }
 
-                // Finalisation de la modification
+                // Finalisation
                 TopSolidHost.Application.EndModification(true, true);
-                LogMessage("Modification terminée avec succès.", System.Drawing.Color.Green);
-
-                // 3. Gestion de la fermeture du document maître et restauration du document courant
-                if (docMaster != DocumentId.Empty && !masterWasOpen)
-                {
-                    // Si le document maître n'était pas ouvert, on le referme en sauvegardant
-                    TopSolidHost.Documents.Close(docMaster, true, true);
-                    LogMessage("Document maître refermé et sauvegardé.", System.Drawing.Color.Black);
-                }
-
-                // Restauration du document électrode comme document courant
-                if (currentDoc != DocumentId.Empty)
-                {
-                    TopSolidHost.Documents.Open(ref currentDoc);
-                    LogMessage("Retour au document électrode.", System.Drawing.Color.Black);
-                }
+                LogMessage("Modification Elec terminée avec succès.", System.Drawing.Color.Green);
             }
             catch (Exception ex)
             {
-                // Annuler la modification en cas d'erreur pour ne pas laisser l'état instable
+                LogMessage("Erreur ParamElecListe : " + ex.Message, System.Drawing.Color.Red);
                 TopSolidHost.Application.EndModification(false, false);
                 LogMessage("Erreur critique lors de la modification : " + ex.Message, System.Drawing.Color.Red);
                 MessageBox.Show("Erreur critique : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -1092,9 +1149,9 @@ namespace iFixInvalidity
         }
 
         //Recupere les parametres de Gap et les publie
+        //Recupere les parametres de Gap et les publie
         private void GapPublish(DocumentId currentDoc)
         {
-            // Définition des noms des paramètres
             const string GapEb = "Gap EB";
             const string GapDemiFini = "Gap Demi-Fini";
             const string GapFini = "Gap Fini";
@@ -1103,88 +1160,75 @@ namespace iFixInvalidity
             const string GapDemiFiniExisteTxt = "01-Gap Demi fini";
             const string GapFiniExisteTxt = "02-Gap Fini";
 
-            LogMessage("Début de la publication des gaps...", System.Drawing.Color.Black); // Information en noir
+            LogMessage("Début de la publication des gaps...", System.Drawing.Color.Black);
 
-            // Recherche des paramètres
-            ElementId GapEbId = SearchParamByName(currentDoc, GapEbExisteTxt);
-            ElementId GapDemiFiniId = SearchParamByName(currentDoc, GapDemiFiniExisteTxt);
-            ElementId GapFiniId = SearchParamByName(currentDoc, GapFiniExisteTxt);
-
-            // Initialisation des SmartReal
-            SmartReal gapEbPublie = new SmartReal(ElementId.Empty);
-            SmartReal gapDemiFiniPublie = new SmartReal(ElementId.Empty);
-            SmartReal gapFiniPublie = new SmartReal(ElementId.Empty);
-
-            // Récupération de la liste des publications existantes
-            List<ElementId> publishingList = TSH.Entities.GetPublishings(currentDoc);
-
-            if (publishingList == null)
-            {
-                string errorMsg = "Erreur : Impossible de récupérer la liste des publications.";
-                LogMessage(errorMsg, System.Drawing.Color.Red); // Erreur en rouge
-                MessageBox.Show(errorMsg, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            LogMessage($"Nombre de publications existantes : {publishingList.Count}", System.Drawing.Color.Green); // Succès en vert
-
-            // Vérification de l'existence des publications
-            bool gapEbExist = GapPublishExist(publishingList, GapEb);
-            bool gapDemiFiniExist = GapPublishExist(publishingList, GapDemiFini);
-            bool gapFiniExist = GapPublishExist(publishingList, GapFini);
-
-            // Début de la modification dans TopSolid
+            // Début de la modification
             if (!TopSolidHost.Application.StartModification("Publication des gaps", false))
             {
-                string errorMsg = "Erreur : Impossible de démarrer la modification.";
-                LogMessage(errorMsg, System.Drawing.Color.Red); // Erreur en rouge
-                MessageBox.Show(errorMsg, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LogMessage("Erreur : Impossible de démarrer la modification.", System.Drawing.Color.Red);
                 return;
             }
-
-            currentDoc = DocumentCourant();
 
             try
             {
-                // Vérification que le document est bien modifiable
-                TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
+                // 1. Mise à jour du document
+                currentDoc = DocumentCourant();
+                if (currentDoc != DocumentId.Empty)
+                {
+                    currentDoc = GetLastRevisionDoc(currentDoc);
+                    TopSolidHost.Documents.EnsureIsDirty(ref currentDoc);
+                    // Mise à jour de l'ID après EnsureIsDirty
+                    currentDoc = GetLastRevisionDoc(currentDoc);
+                }
 
-                // Publication des gaps si elles n'existent pas déjà
+                // 2. Recherche des éléments DANS le document mis à jour
+                ElementId GapEbId = SearchParamByName(currentDoc, GapEbExisteTxt);
+                ElementId GapDemiFiniId = SearchParamByName(currentDoc, GapDemiFiniExisteTxt);
+                ElementId GapFiniId = SearchParamByName(currentDoc, GapFiniExisteTxt);
+
+                // Récupération de la liste des publications existantes (sur le doc à jour)
+                List<ElementId> publishingList = TSH.Entities.GetPublishings(currentDoc);
+                bool gapEbExist = GapPublishExist(publishingList, GapEb);
+                bool gapDemiFiniExist = GapPublishExist(publishingList, GapDemiFini);
+                bool gapFiniExist = GapPublishExist(publishingList, GapFini);
+
+                // 3. Action
                 if (!gapEbExist && GapEbId != ElementId.Empty)
                 {
-                    gapEbPublie = CreateSmartReal(GapEbId);
-                    ElementId realPublie = TSH.Parameters.PublishReal(currentDoc, GapEb, gapEbPublie);
-                    TSH.Elements.SetName(realPublie, GapEb);
-                    LogMessage("Publication de Gap EB réalisée avec succès.", System.Drawing.Color.Green); // Succès en vert
+                    SmartReal gapEbPublie = CreateSmartReal(GapEbId);
+                    if (gapEbPublie != null) // CreateSmartReal peut renvoyer null
+                    {
+                        ElementId realPublie = TSH.Parameters.PublishReal(currentDoc, GapEb, gapEbPublie);
+                        TSH.Elements.SetName(realPublie, GapEb);
+                    }
                 }
 
                 if (!gapDemiFiniExist && GapDemiFiniId != ElementId.Empty)
                 {
-                    gapDemiFiniPublie = CreateSmartReal(GapDemiFiniId);
-                    ElementId realPublie = TSH.Parameters.PublishReal(currentDoc, GapDemiFini, gapDemiFiniPublie);
-                    TSH.Elements.SetName(realPublie, GapDemiFini);
-                    LogMessage("Publication de Gap Demi-Fini réalisée avec succès.", System.Drawing.Color.Green); // Succès en vert
+                    SmartReal gapDemiFiniPublie = CreateSmartReal(GapDemiFiniId);
+                    if (gapDemiFiniPublie != null)
+                    {
+                        ElementId realPublie = TSH.Parameters.PublishReal(currentDoc, GapDemiFini, gapDemiFiniPublie);
+                        TSH.Elements.SetName(realPublie, GapDemiFini);
+                    }
                 }
 
                 if (!gapFiniExist && GapFiniId != ElementId.Empty)
                 {
-                    gapFiniPublie = CreateSmartReal(GapFiniId);
-                    ElementId realPublie = TSH.Parameters.PublishReal(currentDoc, GapFini, gapFiniPublie);
-                    TSH.Elements.SetName(realPublie, GapFini);
-                    LogMessage("Publication de Gap Fini réalisée avec succès.", System.Drawing.Color.Green); // Succès en vert
+                    SmartReal gapFiniPublie = CreateSmartReal(GapFiniId);
+                    if (gapFiniPublie != null)
+                    {
+                        ElementId realPublie = TSH.Parameters.PublishReal(currentDoc, GapFini, gapFiniPublie);
+                        TSH.Elements.SetName(realPublie, GapFini);
+                    }
                 }
 
-                // Validation de la modification
                 TopSolidHost.Application.EndModification(true, true);
-                LogMessage("Modification terminée avec succès.", System.Drawing.Color.Green); // Succès en vert
+                LogMessage("Publication Gap terminée avec succès.", System.Drawing.Color.Green);
             }
             catch (Exception ex)
             {
-                string errorMsg = $"Erreur : Une erreur s'est produite lors de la modification. {ex.Message}";
-                LogMessage(errorMsg, System.Drawing.Color.Red); // Erreur en rouge
-                MessageBox.Show(errorMsg, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                // Annulation de la modification en cas d'erreur
+                LogMessage($"Erreur GapPublish : {ex.Message}", System.Drawing.Color.Red);
                 TopSolidHost.Application.EndModification(false, false);
             }
         }
@@ -1905,7 +1949,9 @@ namespace iFixInvalidity
         //Bouton quiter-----------------------------------------------------------------------------------------------------------
         private void quitToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Environment.Exit(0);
+            // MODIFICATION : Utiliser Application.Exit() pour déclencher l'événement FormClosing
+            // Environment.Exit(0); // Tuer le processus est trop brutal
+            System.Windows.Forms.Application.Exit();
         }
 
         //Bouton invok
@@ -1927,6 +1973,7 @@ namespace iFixInvalidity
                 // Vérification si un document courant est sélectionné
                 if (currentDoc.DocId != DocumentId.Empty)
                 {
+
                     LogMessage($"Document courant : {currentDoc.DocNomTxt}", System.Drawing.Color.Black);
                 }
                 else
@@ -1955,82 +2002,96 @@ namespace iFixInvalidity
                         {
                             LogMessage("Détection d'un document électrode.", System.Drawing.Color.Black);
 
-                            // Variables pour la recherche d'opérations spécifiques
-                            string proprieteElecTxt = "TopSolid.Cad.Electrode.DB.PropertyData.PropertyDataOperation";
-                            string dossierType = "TopSolid.Kernel.DB.Operations.FolderOperation";
-
-                            ElementId operationProprieteElec = new ElementId();
-                            ElementId operationDossierType = new ElementId();
-
-                            try
+                            // CORRECTIF: On démarre la modification AVANT de chercher les opérations
+                            if (!TopSolidHost.Application.StartModification("Déplacement d'opération", false))
                             {
-                                LogMessage($"Nombre d'opérations trouvées : {currentDoc.DocOperations.Count}", System.Drawing.Color.Black);
-                            }
-                            catch (Exception ex)
-                            {
-                                // Log et affichage d'une erreur si la récupération des opérations échoue
-                                LogMessage($"Erreur lors de la récupération des opérations : {ex.Message}", System.Drawing.Color.Red);
+                                LogMessage("Impossible de démarrer la modification.", System.Drawing.Color.Red);
                                 return;
                             }
 
-                            if (currentDoc.DocOperations.Count > 0)
+                            try
                             {
-                                operationProprieteElec = OperationByType(currentDoc.DocOperations, proprieteElecTxt);
-                                operationDossierType = OperationByType(currentDoc.DocOperations, dossierType);
-                            }
-
-                            // Vérifie si une opération dossier est trouvée
-                            if (operationDossierType != ElementId.Empty)
-                            {
-                                string nomDossier = TSH.Elements.GetFriendlyName(operationDossierType);
-                                LogMessage($"Nom du dossier trouvé : {nomDossier}", System.Drawing.Color.Black);
-                            }
-
-                            // Vérifie si l'opération électrode a été trouvée
-                            if (operationProprieteElec == ElementId.Empty)
-                            {
-                                MessageBox.Show("Propriétés électrode manquante.\n\n" +
-                                                "Avez-vous configuré les propriétés électrode dans l'ensemble électrode ?\n\n" +
-                                                "Relancez l'application une fois les propriétés électrode configurées pour actualiser les paramètres.",
-                                                "Erreur : Propriétés électrode manquante",
-                                                MessageBoxButtons.OK,
-                                                MessageBoxIcon.Warning);
-                                LogMessage("Propriétés électrode manquante.", System.Drawing.Color.Red);
-                            }
-                            else
-                            {
-                                ElementId parentOperationProprieteElec = TSH.Elements.GetOwner(operationProprieteElec);
-                                int indexoperationProprieteElec = IndexOperation(operationProprieteElec, currentDoc.DocId);
-                                string message = TSH.Elements.GetFriendlyName(parentOperationProprieteElec);
-                                LogMessage($"Nom du parent de l'opération : {message}", System.Drawing.Color.Black);
-
-                                int positionCible = indexoperationProprieteElec + 1;
-
-                                // Début de la modification
-                                if (!TopSolidHost.Application.StartModification("Déplacement d'opération", false))
+                                // 1. On s'assure que le document est modifiable (Dirty) et à la dernière révision
+                                DocumentId dirtyDocId = currentDoc.DocId;
+                                if (dirtyDocId != DocumentId.Empty)
                                 {
-                                    LogMessage("Impossible de démarrer la modification.", System.Drawing.Color.Red);
-                                    return;
+                                    dirtyDocId = GetLastRevisionDoc(dirtyDocId);
+                                    TopSolidHost.Documents.EnsureIsDirty(ref dirtyDocId);
+                                    // On récupère l'ID final après le EnsureIsDirty (au cas où il change)
+                                    dirtyDocId = GetLastRevisionDoc(dirtyDocId);
+                                    currentDoc.DocId = dirtyDocId; // Mise à jour de l'objet local
                                 }
 
-                                currentDoc.DocId = DocumentCourant();
-                                DocumentId currentDocId = currentDoc.DocId;
-
-                                try
+                                if (docMaster != DocumentId.Empty)
                                 {
-                                    TopSolidHost.Documents.EnsureIsDirty(ref currentDocId);
-                                    TSH.Operations.MoveOperation(operationDossierType, parentOperationProprieteElec, positionCible);
-                                    TSH.Documents.Update(currentDoc.DocId, true);
-                                    TopSolidHost.Application.EndModification(true, true);
-                                    LogMessage("Opération déplacée avec succès.", System.Drawing.Color.Green); // Succès en vert
+                                    docMaster = GetLastRevisionDoc(docMaster);
+                                    TopSolidHost.Documents.EnsureIsDirty(ref docMaster);
+                                    docMaster = GetLastRevisionDoc(docMaster);
                                 }
-                                catch (Exception ex)
+
+                                // 2. MAINTENANT, on recherche les opérations sur le document A JOUR (Dirty)
+                                string proprieteElecTxt = "TopSolid.Cad.Electrode.DB.PropertyData.PropertyDataOperation";
+                                string dossierType = "TopSolid.Kernel.DB.Operations.FolderOperation";
+
+                                // On récupère la liste fraîche des opérations via TSH
+                                List<ElementId> operations = TSH.Operations.GetOperations(currentDoc.DocId);
+                                LogMessage($"Nombre d'opérations trouvées (Dirty) : {operations.Count}", System.Drawing.Color.Black);
+
+                                ElementId operationProprieteElec = OperationByType(operations, proprieteElecTxt);
+                                ElementId operationDossierType = OperationByType(operations, dossierType);
+
+                                // Log pour debug
+                                if (operationDossierType != ElementId.Empty)
                                 {
+                                    string nomDossier = TSH.Elements.GetFriendlyName(operationDossierType);
+                                    LogMessage($"Nom du dossier trouvé : {nomDossier}", System.Drawing.Color.Black);
+                                }
+
+                                // Vérifie si l'opération électrode a été trouvée
+                                if (operationProprieteElec == ElementId.Empty)
+                                {
+                                    // On annule la modif proprement avant d'afficher l'erreur
                                     TopSolidHost.Application.EndModification(false, false);
-                                    LogMessage($"Erreur lors du déplacement de l'opération : {ex.Message}", System.Drawing.Color.Red);
+
+                                    MessageBox.Show("Propriétés électrode manquante.\n\n" +
+                                                    "Avez-vous configuré les propriétés électrode dans l'ensemble électrode ?\n\n" +
+                                                    "Relancez l'application une fois les propriétés électrode configurées pour actualiser les paramètres.",
+                                                    "Erreur : Propriétés électrode manquante",
+                                                    MessageBoxButtons.OK,
+                                                    MessageBoxIcon.Warning);
+                                    LogMessage("Propriétés électrode manquante.", System.Drawing.Color.Red);
+                                }
+                                else
+                                {
+                                    // 3. Déplacement avec les bons identifiants
+                                    ElementId parentOperationProprieteElec = TSH.Elements.GetOwner(operationProprieteElec);
+
+                                    // IndexOperation utilise aussi GetOperations, donc il faut qu'il utilise le bon DocId
+                                    int indexoperationProprieteElec = IndexOperation(operationProprieteElec, currentDoc.DocId);
+                                    string message = TSH.Elements.GetFriendlyName(parentOperationProprieteElec);
+                                    LogMessage($"Nom du parent de l'opération : {message}", System.Drawing.Color.Black);
+
+                                    int positionCible = indexoperationProprieteElec + 1;
+
+                                    if (operationDossierType != ElementId.Empty)
+                                    {
+                                        TSH.Operations.MoveOperation(operationDossierType, parentOperationProprieteElec, positionCible);
+                                        TSH.Documents.Update(currentDoc.DocId, true);
+                                    }
+
+                                    TopSolidHost.Application.EndModification(true, true);
+                                    LogMessage("Opération déplacée avec succès.", System.Drawing.Color.Green);
                                 }
                             }
+                            catch (Exception ex)
+                            {
+                                TopSolidHost.Application.EndModification(false, false);
+                                LogMessage($"Erreur lors du déplacement de l'opération : {ex.Message}", System.Drawing.Color.Red);
+                            }
+
                             // Récupération des paramètres électrode
+                            // (Ces fonctions doivent gérer leur propre StartModification ou être adaptées, 
+                            // mais on leur passe maintenant le bon DocId à jour au cas où)
                             ParamElecListe(currentDoc.DocId);
                             GapPublish(currentDoc.DocId);
                         }
@@ -2122,12 +2183,30 @@ namespace iFixInvalidity
                 return;
             }
 
+            try
+            {
+                // Mise à jour de l'ID du document courant
+                currentDoc.DocId = DocumentCourant();
 
-            // Mise à jour de l'ID du document courant
-            currentDoc.DocId = DocumentCourant();
-            DocumentId currentDocID = currentDoc.DocId;
+                if (currentDoc.DocId != DocumentId.Empty)
+                {
+                    DocumentId currentDocId = currentDoc.DocId;
+                    // MODIFICATION : On récupère la dernière révision au lieu de simplement recharger le document courant
+                    currentDoc.DocId = GetLastRevisionDoc(currentDoc.DocId);
+                    currentDoc.DocId = currentDocId;
 
-            TopSolidHost.Documents.EnsureIsDirty(ref currentDocID); // juste avant EndModification
+                    // On s'assure que le document est modifiable (Dirty)
+                    TopSolidHost.Documents.EnsureIsDirty(ref currentDocId);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                // Log et affichage d'une erreur si l'activation de l'étape échoue
+                LogMessage($"Erreur : la recuperattion de la derniere revision a échoué : {currentDoc.DocNomTxt} {ex.Message}", System.Drawing.Color.Red);
+                MessageBox.Show($"Erreur : la récupération de la dernière révision a échoué de {currentDoc.DocNomTxt} {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
 
 
             try
@@ -2459,7 +2538,9 @@ namespace iFixInvalidity
                     }
 
                     // Assure que le document est marqué comme modifié
-                    TopSolidHost.Documents.EnsureIsDirty(ref currentDocID);
+                    var docId = currentDoc.DocId;
+                    TopSolidHost.Documents.EnsureIsDirty(ref docId);
+                    currentDoc.DocId = docId;
 
                 }
 
@@ -2474,7 +2555,9 @@ namespace iFixInvalidity
             finally
             {
                 // Assure que le document est marqué comme modifié
-                TopSolidHost.Documents.EnsureIsDirty(ref currentDocID);
+                var docId = currentDoc.DocId;
+                TopSolidHost.Documents.EnsureIsDirty(ref docId);
+                currentDoc.DocId = docId;
                 TopSolidHost.Application.EndModification(true, true);
             }
 
@@ -2520,7 +2603,7 @@ namespace iFixInvalidity
 
 
             #endregion
-
+             
         }
 
         #region Classe interne (placeholder)
