@@ -2528,5 +2528,16 @@ namespace iFixInvalidity
         {
         }
         #endregion
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            Electrode electrode = new Electrode();
+            electrode.TraiterElectrodes(); // ✅ Exécute le code
+        }
     }
 }

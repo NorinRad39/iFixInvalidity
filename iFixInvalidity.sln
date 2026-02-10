@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.11.35431.28
+# Visual Studio Version 18
+VisualStudioVersion = 18.2.11415.280 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "iFixInvalidity", "iFixInvalidity\iFixInvalidity.csproj", "{50FEDBB5-3F3C-4BB1-85B2-2500E7AD49A0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OutilsTs", "..\Classe-outils-topsolid\Classe outils topsolid\OutilsTs.csproj", "{E2D81E73-A4DC-47BB-BC93-ACBEBDE63F1D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{50FEDBB5-3F3C-4BB1-85B2-2500E7AD49A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{50FEDBB5-3F3C-4BB1-85B2-2500E7AD49A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{50FEDBB5-3F3C-4BB1-85B2-2500E7AD49A0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E2D81E73-A4DC-47BB-BC93-ACBEBDE63F1D}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{E2D81E73-A4DC-47BB-BC93-ACBEBDE63F1D}.Debug|Any CPU.Build.0 = Debug|x64
+		{E2D81E73-A4DC-47BB-BC93-ACBEBDE63F1D}.Release|Any CPU.ActiveCfg = Release|x64
+		{E2D81E73-A4DC-47BB-BC93-ACBEBDE63F1D}.Release|Any CPU.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
