@@ -36,7 +36,7 @@ namespace iFixInvalidity
 
             PdmObjectId Projet = TSH.Pdm.GetProject(document.DocPdmObject);
            
-            List<PdmObjectId> pdmObjectIds = TSH.Pdm.GetProjectDocuments(Projet);
+            //List<PdmObjectId> pdmObjectIds = TSH.Pdm.GetProjectDocuments(Projet);
 
 
 
