@@ -30,20 +30,54 @@ namespace iFixInvalidity
         // Méthode publique à appeler
         public void TraiterElectrodes()
         {
-            Document document = new Document();
+            try
+            {
+                MessageBox.Show("Début du traitement des électrodes", "Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-            document.DocId = TSH.Documents.EditedDocument;
+                Document document = new Document();
+                document.DocId = TSH.Documents.EditedDocument;
 
-            PdmObjectId Projet = TSH.Pdm.GetProject(document.DocPdmObject);
-           
-            //List<PdmObjectId> pdmObjectIds = TSH.Pdm.GetProjectDocuments(Projet);
+                if (document.DocId == DocumentId.Empty)
+                {
+                    MessageBox.Show("Aucun document TopSolid actif détecté !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
 
+                PdmObjectId Projet = TSH.Pdm.GetProject(document.DocPdmObject);
 
+                string projectName = TSH.Pdm.GetName(Projet);
 
+                MessageBox.Show($"Projet détecté : {projectName}", "Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
+                if (Projet.Equals(PdmObjectId.Empty))
+                {
+                    MessageBox.Show("Impossible de récupérer le projet PDM.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
 
+                TSH.Pdm.GetConstituents(Projet, out var dossiers, out var documents);
 
+                if (documents == null || documents.Count == 0)
+                {
+                    MessageBox.Show("Aucun document trouvé dans le projet.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
 
+                MessageBox.Show($"Nombre de documents trouvés : {documents.Count}", "Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                foreach (var doc in documents)
+                {
+                    var docId = TSH.Documents.GetDocument(doc);
+                    string docName = TSH.Documents.GetName(docId);
+                    MessageBox.Show($"Document: {docName}");
+                }
+
+                MessageBox.Show("Traitement terminé avec succès.", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ERREUR : {ex.Message}\n\nStack:\n{ex.StackTrace}", "Exception", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }
