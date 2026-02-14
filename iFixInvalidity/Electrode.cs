@@ -52,7 +52,7 @@ namespace iFixInvalidity
         {
             try
             {
-                ShowDebugMessage("Début du traitement des électrodes");
+                //ShowDebugMessage("Début du traitement des électrodes");
 
                 DocumentId currentDocumentId = TSH.Documents.EditedDocument;
 
@@ -62,7 +62,7 @@ namespace iFixInvalidity
                 }
 
                 List<PdmObjectId> projectDocuments = PDM.GetAllProjectDocuments();
-                ShowDebugMessage($"Nombre de documents trouvés : {projectDocuments.Count}");
+               // ShowDebugMessage($"Nombre de documents trouvés : {projectDocuments.Count}");
 
                 DocumentId electrodeAssembly = FindElectrodeAssemblies(currentDocumentId, projectDocuments);
 
@@ -196,6 +196,7 @@ namespace iFixInvalidity
             foreach (ElementId paremetre in ensembleElec.DocParameters)
 
             { string parameterType = TSH.Elements.GetTypeFullName(paremetre);
+                
                 if (parameterType == "TopSolid.Kernel.DB.Parameters.TextParameterEntity")
                 {
                     //string parameterFullName = TSH.Parameters.GetNameParameter(paremetre);

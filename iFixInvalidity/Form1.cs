@@ -366,6 +366,7 @@ namespace iFixInvalidity
         string OP = "OP";                  // Paramètre pour l'opération
         string nomElec = "Nom elec";       // Paramètre pour le nom de l'électrode
         string Nomdocu = "Nom_docu";      // Paramètre pour le nom du document
+        string NombrePieces = "Nombre de piéces"; // Paramètre pour le nombre de pièces
 
         #endregion
 
@@ -440,60 +441,60 @@ namespace iFixInvalidity
                         }
                         if (ParameterName == Nomdocu)
                         {
-                            nomDocuOriginal = Parameter;
-                            LogMessage($"Paramètre '{Nomdocu}' trouvé.", System.Drawing.Color.Green);
+                                nomDocuOriginal = Parameter;
+                                LogMessage($"Paramètre '{Nomdocu}' trouvé.", System.Drawing.Color.Green);
                         }
-                        if (ParameterName == "Nombre de piéces")
+                        if (ParameterName == NombrePieces)
                         {
                             nombrePieces = Parameter;
-                            LogMessage($"Paramètre 'Nombre de pièces' trouvé.", System.Drawing.Color.Green);
+                            LogMessage($"Paramètre '{NombrePieces}' trouvé.", System.Drawing.Color.Green);
                         }
-
                         if (prepaTrouvé && !opOriginalFound)
                         {
                             bool dérivé = TSHD.Tools.IsDerived(PrepaDocument);
-                            try
-                            {
-                                if (dérivé)
+                                try
                                 {
-                                    List<ElementId> parameters = TSH.Parameters.GetParameters(PrepaDocument);
-
-                                    foreach (ElementId parameter in parameters)
+                                    if (dérivé)
                                     {
-                                        string parameterTxt = TSH.Elements.GetFriendlyName(parameter);
+                                        List<ElementId> parameters = TSH.Parameters.GetParameters(PrepaDocument);
 
-                                        if (parameterTxt == OP)
+                                        foreach (ElementId parameter in parameters)
                                         {
-                                            OPOriginal = parameter;
-                                            LogMessage($"Paramètre '{OP}' trouvé.", System.Drawing.Color.Green);
-                                            opOriginalFound = true; // Mettre le drapeau à true
-                                            dérivé = false;
-                                            break; // Sortir de la boucle interne
+                                            string parameterTxt = TSH.Elements.GetFriendlyName(parameter);
+
+                                            if (parameterTxt == OP)
+                                            {
+                                                OPOriginal = parameter;
+                                                LogMessage($"Paramètre '{OP}' trouvé.", System.Drawing.Color.Green);
+                                                opOriginalFound = true; // Mettre le drapeau à true
+                                                dérivé = false;
+                                                break; // Sortir de la boucle interne
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        foreach (ElementId ParameterPrepaDocument in ParameterPubliéListPrepaDocument)
+                                        {
+                                            string ParameterPrepaDocumentName = TSH.Elements.GetFriendlyName(ParameterPrepaDocument);
+
+                                            if (ParameterPrepaDocumentName == OP)
+                                            {
+                                                OPOriginal = ParameterPrepaDocument;
+                                                LogMessage($"Paramètre '{OP}' trouvé.", System.Drawing.Color.Green);
+                                                opOriginalFound = true; // Mettre le drapeau à true
+                                                break; // Sortir de la boucle interne
+                                            }
                                         }
                                     }
                                 }
-                                else
+                                catch (Exception ex)
                                 {
-                                    foreach (ElementId ParameterPrepaDocument in ParameterPubliéListPrepaDocument)
-                                    {
-                                        string ParameterPrepaDocumentName = TSH.Elements.GetFriendlyName(ParameterPrepaDocument);
-
-                                        if (ParameterPrepaDocumentName == OP)
-                                        {
-                                            OPOriginal = ParameterPrepaDocument;
-                                            LogMessage($"Paramètre '{OP}' trouvé.", System.Drawing.Color.Green);
-                                            opOriginalFound = true; // Mettre le drapeau à true
-                                            break; // Sortir de la boucle interne
-                                        }
-                                    }
+                                    LogMessage($"Erreur : lors de la récupération des paramètres OP : {ex.Message}", System.Drawing.Color.Red);
+                                    MessageBox.Show("Erreur : lors de la récupération des paramètres OP " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                 }
-                            }
-                            catch (Exception ex)
-                            {
-                                LogMessage($"Erreur : lors de la récupération des paramètres OP : {ex.Message}", System.Drawing.Color.Red);
-                                MessageBox.Show("Erreur : lors de la récupération des paramètres OP " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            }
                         }
+                       
                     }
                 }
                 catch (Exception ex)
@@ -531,6 +532,7 @@ namespace iFixInvalidity
             bool OPUpdated = false;
             bool OPDefinitionSet = false; // Variable pour suivre si la méthode a déjà été exécutée
             bool NomDocuSet = false;
+            bool nbrPcs = false;
 
             try
             {
@@ -546,7 +548,34 @@ namespace iFixInvalidity
 
                 // Recherche des paramètres publiés dans le document courant
                 List<ElementId> ParameterPubliéList = TSH.Parameters.GetParameters(currentDoc);
+                List<ElementId> operations = TSH.Operations.GetOperations(currentDoc);
                 string DocumentExt = String.Empty;
+                if (operations.Count > 0)
+                {
+                    foreach (ElementId operation in operations)
+                    {
+                        string operationName = TSH.Elements.GetFriendlyName(operation);
+                        // Mise à jour du paramètre "Nbr. pièces" pour les documents .TopEld
+                        if (operationName == "Paramètre texte (Nbr. piéces)")
+                        {
+                           
+                            try
+                            {
+                                TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[6]);
+                                nbrPcs = true; // Marquer la méthode comme exécutée
+                                LogMessage($"Paramètre Nbr. piéces mis à jour.", System.Drawing.Color.Green);
+                            }
+                            catch (Exception ex)
+                            {
+                                LogMessage($"Erreur : lors de la mise à jour du paramètre 'Nbr. piéces' : {ex.Message}", System.Drawing.Color.Red);
+                                throw; // Relancer l'exception pour s'assurer que le bloc finally est exécuté
+                            }
+
+                        }
+
+                    }
+                }
+
 
                 // Vérifie si des paramètres ont été trouvés
                 if (ParameterPubliéList.Count > 0)
@@ -618,45 +647,7 @@ namespace iFixInvalidity
                                 }
                             }
 
-                            // Mise à jour du paramètre "Nbr. pièces" pour les documents .TopEld
-                            if (ParameterPubliéName == "Nbr. piéces")
-                            {
-                                ElementId ParameterPubliéOp = TSH.Elements.GetParent(ParameterPublié);
-                               
-                               // Vérification si GetParent a retourné un élément valide
-                               if (ParameterPubliéOp.IsEmpty)
-                               {
-                                   LogMessage($"Avertissement : Le paramètre 'Nbr. pièces' n'a pas de parent valide. Il sera ignoré pour ce document .TopEld.", System.Drawing.Color.Orange);
-                                   continue; // Passer au paramètre suivant
-                               }
-                               
-                                try
-                                {
-                                    if (SmartTxtTable.Length > 6 && SmartTxtTable[6] != null)
-                                    {
-                                       // Vérification supplémentaire : SmartTxtTable[6] ne doit pas référencer un élément d'un autre document
-                                       if (!SmartTxtTable[6].ElementId.IsEmpty && 
-                                           SmartTxtTable[6].ElementId.DocumentId.PdmDocumentId != currentDoc.PdmDocumentId)
-                                       {
-                                           LogMessage($"Avertissement : SmartText[6] référence un élément du document master. Pour les .TopEld, ce paramètre sera ignoré.", System.Drawing.Color.Orange);
-                                       }
-                                       else
-                                       {
-                                           TSH.Parameters.SetSmartTextParameterCreation(ParameterPubliéOp, SmartTxtTable[6]);
-                                           LogMessage($"Paramètre 'Nbr. pièces' mis à jour avec 'Nombre de pièces' du master.", System.Drawing.Color.Green);
-                                       }
-                                    }
-                                    else
-                                    {
-                                        LogMessage($"Avertissement : SmartText pour 'Nombre de pièces' du master non disponible.", System.Drawing.Color.Orange);
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    LogMessage($"Erreur : lors de la mise à jour du paramètre 'Nbr. pièces' : {ex.Message}", System.Drawing.Color.Red);
-                                    throw; // Relancer l'exception pour s'assurer que le bloc finally est exécuté
-                                }
-                            }
+                           
 
                             // Traitement spécifique pour l'extension .TopMillTurn
                             if (DocumentExt == ".TopMillTurn")
@@ -2646,32 +2637,32 @@ namespace iFixInvalidity
                         {
                             LogMessage($"Paramètre '{TotalBrutTxt}' existe déjà.", System.Drawing.Color.Black);
                         }
-
-                        // Création du paramètre "Nbr. pièces" pour les électrodes
-                        if (NbrPiecesExiste == ElementId.Empty)
-                        {
-                            if (currentDoc.DocIsElectrode || iselectrode)
-                            {
-                                ElementId NbrPiecesParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
-                                TSH.Elements.SetName(NbrPiecesParam, NbrPiecesTxt);
-                                TSH.Elements.SetDescription(NbrPiecesParam, NbrPiecesTxt);
-                                NbrPiecesCreated = true;
-                                LogMessage($"Paramètre '{NbrPiecesTxt}' créé.", System.Drawing.Color.Green);
-                                SmartText NbrPiecesSmartTxt = new SmartText(NbrPiecesParam);
-                                ElementId NbrPiecesSmartTxtId = TSH.Parameters.PublishText(currentDoc.DocId, NbrPiecesTxt, NbrPiecesSmartTxt);
-                                TSH.Elements.SetName(NbrPiecesSmartTxtId, NbrPiecesTxt);
-                                LogMessage($"Paramètre '{NbrPiecesTxt}' publié.", System.Drawing.Color.Green);
-                            }
-                            else
-                            {
-                                LogMessage($"Paramètre '{NbrPiecesTxt}' non créé, document non électrode.", System.Drawing.Color.Black);
-                            }
-                        }
-                        else
-                        {
-                            LogMessage($"Paramètre '{NbrPiecesTxt}' existe déjà.", System.Drawing.Color.Black);
-                        }
                     }
+                }
+
+                // Création du paramètre "Nbr. pièces" pour les électrodes
+                if (NbrPiecesExiste == ElementId.Empty)
+                {
+                    if (currentDoc.DocIsElectrode || iselectrode || currentDoc.DocExtention == ".TopEld")
+                    {
+                        ElementId NbrPiecesParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
+                        TSH.Elements.SetName(NbrPiecesParam, NbrPiecesTxt);
+                        TSH.Elements.SetDescription(NbrPiecesParam, NbrPiecesTxt);
+                        NbrPiecesCreated = true;
+                        LogMessage($"Paramètre '{NbrPiecesTxt}' créé.", System.Drawing.Color.Green);
+                        SmartText NbrPiecesSmartTxt = new SmartText(NbrPiecesParam);
+                        ElementId NbrPiecesSmartTxtId = TSH.Parameters.PublishText(currentDoc.DocId, NbrPiecesTxt, NbrPiecesSmartTxt);
+                        TSH.Elements.SetName(NbrPiecesSmartTxtId, NbrPiecesTxt);
+                        LogMessage($"Paramètre '{NbrPiecesTxt}' publié.", System.Drawing.Color.Green);
+                    }
+                    else
+                    {
+                        LogMessage($"Paramètre '{NbrPiecesTxt}' non créé, document non électrode.", System.Drawing.Color.Black);
+                    }
+                }
+                else
+                {
+                    LogMessage($"Paramètre '{NbrPiecesTxt}' existe déjà.", System.Drawing.Color.Black);
                 }
 
                 // Obtention de la liste des publications pour vérifier l'existence de "OP"
