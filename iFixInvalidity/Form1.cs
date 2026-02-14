@@ -2139,11 +2139,6 @@ namespace iFixInvalidity
             System.Windows.Forms.Application.Exit();
         }
 
-        //Bouton invok
-        private void button3_Click(object sender, EventArgs e)
-        {
-
-        }
         #endregion
 
         #region Bouton Fix (button1)
@@ -2820,26 +2815,12 @@ namespace iFixInvalidity
             //}
 
 
-            #endregion
-             
-        }
+                    #endregion
 
-        #region Classe interne (placeholder)
-        internal class Elementid
-        {
-        }
-        #endregion
+                    }
 
-        private void Form1_Load(object sender, EventArgs e)
-        {
 
-        }
 
-        private void button4_Click(object sender, EventArgs e)
-        {
-            Electrode electrode = new Electrode();
-            SmartText nomDocu = electrode.TraiterElectrodes();
-            MessageBox.Show(nomDocu.Value.ToString().Trim());
-        }
-    }
-}
+
+                }
+            }
