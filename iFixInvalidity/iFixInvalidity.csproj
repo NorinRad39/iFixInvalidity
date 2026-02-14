@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -39,8 +39,8 @@
     <ApplicationIcon>un logo de recyclage stylisé qui passe du rouge au vert, avec un engrenage au milieu, sans aucun lien avec lecole %282%29.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="OutilsTs, Version=1.0.9.0, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\packages\OutilsTs.1.0.9\lib\net481\OutilsTs.dll</HintPath>
+    <Reference Include="OutilsTs, Version=1.0.10.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\packages\OutilsTs.1.0.10\lib\net481\OutilsTs.dll</HintPath>
     </Reference>
     <Reference Include="PresentationFramework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\PresentationFramework.4.6.0\lib\PresentationFramework.dll</HintPath>

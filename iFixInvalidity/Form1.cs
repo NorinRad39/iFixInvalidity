@@ -1,27 +1,28 @@
-﻿using System;
+﻿using OutilsTs;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Net.Sockets;
+using System.Security;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using TopSolid.Cad.Design.Automating;
 using TopSolid.Cad.Drafting.Automating;
+using TopSolid.Cad.Electrode.Automating;
 using TopSolid.Kernel.Automating;
+using static System.Net.Mime.MediaTypeNames;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
+using TSEH = TopSolid.Cad.Electrode.Automating.TopSolidElectrodeHost;
 using TSH = TopSolid.Kernel.Automating.TopSolidHost;
 using TSHD = TopSolid.Cad.Design.Automating.TopSolidDesignHost;
-using System.IO;
-using System.Security;
-using System.Security.Cryptography;
-using System.Diagnostics;
-using static System.Net.Mime.MediaTypeNames;
-using TopSolid.Cad.Electrode.Automating;
-using TSEH = TopSolid.Cad.Electrode.Automating.TopSolidElectrodeHost;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
-using OutilsTs;
 
 namespace iFixInvalidity
 {
@@ -365,11 +366,12 @@ namespace iFixInvalidity
         string OP = "OP";                  // Paramètre pour l'opération
         string nomElec = "Nom elec";       // Paramètre pour le nom de l'électrode
         string Nomdocu = "Nom_docu";      // Paramètre pour le nom du document
+
         #endregion
 
         #region Paramètres master / prépa
         //Recuperation des parametre dans le document maitre
-        private void ParametreMaster(in DocumentId docMaster, in DocumentId PrepaDocument, out ElementId indice3D, out ElementId commentaireOriginal, out ElementId designationOriginal, out ElementId OPOriginal, out ElementId nomElecOriginal, out ElementId nomDocuOriginal)
+        private void ParametreMaster(in DocumentId docMaster, in DocumentId PrepaDocument, out ElementId indice3D, out ElementId commentaireOriginal, out ElementId designationOriginal, out ElementId OPOriginal, out ElementId nomElecOriginal, out ElementId nomDocuOriginal, out ElementId nombrePieces)
         {
             // Affichage du nom du document de préparation s'il est valide
             if (PrepaDocument != DocumentId.Empty)
@@ -386,6 +388,7 @@ namespace iFixInvalidity
             OPOriginal = new ElementId();
             nomElecOriginal = new ElementId();
             nomDocuOriginal = new ElementId();
+            nombrePieces = new ElementId();
 
             List<ElementId> ParameterPubliéList = new List<ElementId>();
 
@@ -439,6 +442,11 @@ namespace iFixInvalidity
                         {
                             nomDocuOriginal = Parameter;
                             LogMessage($"Paramètre '{Nomdocu}' trouvé.", System.Drawing.Color.Green);
+                        }
+                        if (ParameterName == "Nombre de piéces")
+                        {
+                            nombrePieces = Parameter;
+                            LogMessage($"Paramètre 'Nombre de pièces' trouvé.", System.Drawing.Color.Green);
                         }
 
                         if (prepaTrouvé && !opOriginalFound)
@@ -610,6 +618,46 @@ namespace iFixInvalidity
                                 }
                             }
 
+                            // Mise à jour du paramètre "Nbr. pièces" pour les documents .TopEld
+                            if (ParameterPubliéName == "Nbr. piéces")
+                            {
+                                ElementId ParameterPubliéOp = TSH.Elements.GetParent(ParameterPublié);
+                               
+                               // Vérification si GetParent a retourné un élément valide
+                               if (ParameterPubliéOp.IsEmpty)
+                               {
+                                   LogMessage($"Avertissement : Le paramètre 'Nbr. pièces' n'a pas de parent valide. Il sera ignoré pour ce document .TopEld.", System.Drawing.Color.Orange);
+                                   continue; // Passer au paramètre suivant
+                               }
+                               
+                                try
+                                {
+                                    if (SmartTxtTable.Length > 6 && SmartTxtTable[6] != null)
+                                    {
+                                       // Vérification supplémentaire : SmartTxtTable[6] ne doit pas référencer un élément d'un autre document
+                                       if (!SmartTxtTable[6].ElementId.IsEmpty && 
+                                           SmartTxtTable[6].ElementId.DocumentId.PdmDocumentId != currentDoc.PdmDocumentId)
+                                       {
+                                           LogMessage($"Avertissement : SmartText[6] référence un élément du document master. Pour les .TopEld, ce paramètre sera ignoré.", System.Drawing.Color.Orange);
+                                       }
+                                       else
+                                       {
+                                           TSH.Parameters.SetSmartTextParameterCreation(ParameterPubliéOp, SmartTxtTable[6]);
+                                           LogMessage($"Paramètre 'Nbr. pièces' mis à jour avec 'Nombre de pièces' du master.", System.Drawing.Color.Green);
+                                       }
+                                    }
+                                    else
+                                    {
+                                        LogMessage($"Avertissement : SmartText pour 'Nombre de pièces' du master non disponible.", System.Drawing.Color.Orange);
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    LogMessage($"Erreur : lors de la mise à jour du paramètre 'Nbr. pièces' : {ex.Message}", System.Drawing.Color.Red);
+                                    throw; // Relancer l'exception pour s'assurer que le bloc finally est exécuté
+                                }
+                            }
+
                             // Traitement spécifique pour l'extension .TopMillTurn
                             if (DocumentExt == ".TopMillTurn")
                             {
@@ -721,14 +769,14 @@ namespace iFixInvalidity
                                     catch (Exception ex)
                                     {
                                         LogMessage($"Erreur : lors de la mise à jour du paramètre 'Commentaire' : {ex.Message}", System.Drawing.Color.Red);
-                                        throw; // Relancer l'exception pour s'assurer que le bloc finally est exécuté
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                else
+                                                                 throw; // Relancer l'exception pour s'assurer que le bloc finally est exécuté
+                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        else
                 {
                     LogMessage("Erreur : La liste des paramètres courants est vide", System.Drawing.Color.Red);
                 }
@@ -1004,9 +1052,10 @@ namespace iFixInvalidity
             const string DesignationOp = "Paramètre texte (Designation)";
             const string Nom_elecTxt = "Paramètre texte (Nom elec)";
             const string TotalBrutTxt = "Paramètre entier (Total brut)";
+            const string NbrPiecesTxt = "Paramètre texte (Nbr. pièces)";
 
             // Tentative de démarrer la modification
-            if (!TopSolidHost.Application.StartModification("My Action", false))
+            if (!TopSolidHost.Application.StartModification("Publication des paramètres électrode", false))
             {
                 LogMessage("Erreur : Impossible de démarrer la modification.", System.Drawing.Color.Red);
                 return;
@@ -1026,11 +1075,7 @@ namespace iFixInvalidity
                     currentDoc = GetLastRevisionDoc(currentDoc);
                 }
 
-                if (docMaster != DocumentId.Empty)
-                {
-                    docMaster = GetLastRevisionDoc(docMaster);
-                    TopSolidHost.Documents.EnsureIsDirty(ref docMaster);
-                }
+                // Note : On ne modifie PAS le docMaster ici, on va juste lire ses publications
 
                 // 2. MAINTENANT on récupère les éléments sur le document mis à jour
 
@@ -1044,22 +1089,69 @@ namespace iFixInvalidity
                     nomElecOriginal = TSH.Parameters.GetNameParameter(currentDoc);
                 }
 
-                ElementId nomDocu = TSH.Elements.SearchByName(currentDoc, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeName");
+
+                Electrode electrode = new Electrode();
+                SmartText smartNomDocu = electrode.TraiterElectrodes(); ;
                 ElementId designationPiece = TSH.Elements.SearchByName(currentDoc, "$TopSolid.Cad.Electrode.DB.Electrodes.ShapeToErodeDescription");
-                ElementId indice3DElec = TSH.Elements.SearchByName(currentDoc, "Indice Elec");
+                ElementId indice3DElec = TSH.Elements.SearchByName(currentDoc, "Indice elec");
+
+                // Vérification de l'existence de Indice elec (fait partie des paramètres électrode)
+                if (indice3DElec == ElementId.Empty)
+                {
+                    LogMessage("Avertissement : Le paramètre 'Indice elec' n'existe pas. Assurez-vous que les propriétés électrode sont correctement configurées dans l'ensemble électrode.", System.Drawing.Color.Orange);
+                }
+
+                // Recherche du paramètre "Nbr. pièces" dans le document courant
+                ElementId nbrPiecesParam = TSH.Elements.SearchByName(currentDoc, "Nbr. piéces");
+
+                // Recherche du paramètre "Nombre de pièces" publié dans le document master (SANS modifier le master)
+                ElementId nombrePiecesMaster = ElementId.Empty;
+                if (docMaster != DocumentId.Empty)
+                {
+                    List<ElementId> masterPublishings = TSH.Entities.GetPublishings(docMaster);
+                    foreach (ElementId publishing in masterPublishings)
+                    {
+                        string publishingName = TSH.Elements.GetFriendlyName(publishing);
+                        if (publishingName == "Nombre de pièces")
+                        {
+                            nombrePiecesMaster = publishing;
+                            LogMessage("Paramètre 'Nombre de pièces' trouvé dans le document master.", System.Drawing.Color.Green);
+                            break;
+                        }
+                    }
+                }
+
+                // Création du SmartText pour connecter Nbr. pièces au paramètre du master
+                SmartText nbrPiecesSmart = null;
+                if (nombrePiecesMaster != ElementId.Empty)
+                {
+                    nbrPiecesSmart = CreateSmartTxt(nombrePiecesMaster);
+                    LogMessage("SmartText créé pour connecter 'Nbr. pièces' à 'Nombre de pièces' du master.", System.Drawing.Color.Green);
+                }
+                else
+                {
+                    LogMessage("Avertissement : 'Nombre de pièces' non trouvé dans le master.", System.Drawing.Color.Orange);
+                }
+
                 // On recalcule le total brut sur le document à jour
                 int TotalBrut = TotalBrutCalcul(currentDoc);
 
                 // Initialisation des objets SmartText avec les IDs valides
-                SmartText nomDocuSmart = (nomDocu != ElementId.Empty) ? CreateSmartTxt(nomDocu) : new SmartText("");
+                //SmartText nomDocuSmart = (nomDocu != ElementId.Empty) ? CreateSmartTxt(nomDocu) : new SmartText("");
                 SmartText nomElecSmart = (nomElecOriginal != ElementId.Empty) ? CreateSmartTxt(nomElecOriginal) : new SmartText("");
                 SmartText designationPieceSmart = (designationPiece != ElementId.Empty) ? CreateSmartTxt(designationPiece) : new SmartText("");
+
+                // Indice elec est déjà connecté à Indice 3D via les propriétés électrode, on ne fait que créer le SmartText
                 SmartText indice3DElecSmart = (indice3DElec != ElementId.Empty) ? CreateSmartTxt(indice3DElec) : new SmartText("");
+
                 SmartInteger TotalBrutSmart = new SmartInteger(TotalBrut);
+
+                // Note : Indice elec ne doit PAS être publié, il est déjà connecté à Indice 3D du master via les propriétés électrode
+                // Note : Nbr. pièces doit être connecté à Nombre de pièces du master
 
                 // Tableau des SmartText
                 SmartText[] SmartTxtTable = new SmartText[4];
-                SmartTxtTable[0] = nomDocuSmart;
+                SmartTxtTable[0] = smartNomDocu;
                 SmartTxtTable[1] = nomElecSmart;
                 SmartTxtTable[2] = designationPieceSmart;
                 SmartTxtTable[3] = indice3DElecSmart;
@@ -1084,7 +1176,11 @@ namespace iFixInvalidity
                         TSH.Parameters.SetSmartTextParameterCreation(operation, SmartTxtTable[1]);
                     else if (nom == TotalBrutTxt)
                         TSH.Parameters.SetSmartIntegerParameterCreation(operation, TotalBrutSmart);
+                    else if (nom == NbrPiecesTxt && nbrPiecesSmart != null)
+                        TSH.Parameters.SetSmartTextParameterCreation(operation, nbrPiecesSmart);
                 }
+
+
 
                 // Finalisation
                 TopSolidHost.Application.EndModification(true, true);
@@ -1192,34 +1288,75 @@ namespace iFixInvalidity
                 bool gapDemiFiniExist = GapPublishExist(publishingList, GapDemiFini);
                 bool gapFiniExist = GapPublishExist(publishingList, GapFini);
 
-                // 3. Action
-                if (!gapEbExist && GapEbId != ElementId.Empty)
+                // 3. Action - Toujours publier/mettre à jour les gaps (même s'ils existent déjà)
+                if (GapEbId != ElementId.Empty)
                 {
                     SmartReal gapEbPublie = CreateSmartReal(GapEbId);
                     if (gapEbPublie != null) // CreateSmartReal peut renvoyer null
                     {
-                        ElementId realPublie = TSH.Parameters.PublishReal(currentDoc, GapEb, gapEbPublie);
-                        TSH.Elements.SetName(realPublie, GapEb);
+                        if (gapEbExist)
+                        {
+                            // Mettre à jour la définition de la publication existante (ne pas supprimer pour conserver les connexions)
+                            ElementId existingGap = publishingList.FirstOrDefault(p => TSH.Elements.GetName(p) == GapEb);
+                            if (existingGap != ElementId.Empty)
+                            {
+                                TSH.Parameters.SetRealPublishingDefinition(existingGap, gapEbPublie);
+                                LogMessage($"Gap '{GapEb}' mis à jour (connexions conservées).", System.Drawing.Color.Green);
+                            }
+                        }
+                        else
+                        {
+                            // Créer une nouvelle publication si elle n'existe pas
+                            ElementId realPublie = TSH.Parameters.PublishReal(currentDoc, GapEb, gapEbPublie);
+                            TSH.Elements.SetName(realPublie, GapEb);
+                            LogMessage($"Gap '{GapEb}' publié avec succès.", System.Drawing.Color.Green);
+                        }
                     }
                 }
 
-                if (!gapDemiFiniExist && GapDemiFiniId != ElementId.Empty)
+                if (GapDemiFiniId != ElementId.Empty)
                 {
                     SmartReal gapDemiFiniPublie = CreateSmartReal(GapDemiFiniId);
                     if (gapDemiFiniPublie != null)
                     {
-                        ElementId realPublie = TSH.Parameters.PublishReal(currentDoc, GapDemiFini, gapDemiFiniPublie);
-                        TSH.Elements.SetName(realPublie, GapDemiFini);
+                        if (gapDemiFiniExist)
+                        {
+                            ElementId existingGap = publishingList.FirstOrDefault(p => TSH.Elements.GetName(p) == GapDemiFini);
+                            if (existingGap != ElementId.Empty)
+                            {
+                                TSH.Parameters.SetRealPublishingDefinition(existingGap, gapDemiFiniPublie);
+                                LogMessage($"Gap '{GapDemiFini}' mis à jour (connexions conservées).", System.Drawing.Color.Green);
+                            }
+                        }
+                        else
+                        {
+                            ElementId realPublie = TSH.Parameters.PublishReal(currentDoc, GapDemiFini, gapDemiFiniPublie);
+                            TSH.Elements.SetName(realPublie, GapDemiFini);
+                            LogMessage($"Gap '{GapDemiFini}' publié avec succès.", System.Drawing.Color.Green);
+                        }
                     }
                 }
 
-                if (!gapFiniExist && GapFiniId != ElementId.Empty)
+                if (GapFiniId != ElementId.Empty)
                 {
                     SmartReal gapFiniPublie = CreateSmartReal(GapFiniId);
                     if (gapFiniPublie != null)
                     {
-                        ElementId realPublie = TSH.Parameters.PublishReal(currentDoc, GapFini, gapFiniPublie);
-                        TSH.Elements.SetName(realPublie, GapFini);
+                        if (gapFiniExist)
+                        {
+                            ElementId existingGap = publishingList.FirstOrDefault(p => TSH.Elements.GetName(p) == GapFini);
+                            if (existingGap != ElementId.Empty)
+                            {
+                                TSH.Parameters.SetRealPublishingDefinition(existingGap, gapFiniPublie);
+                                LogMessage($"Gap '{GapFini}' mis à jour (connexions conservées).", System.Drawing.Color.Green);
+                            }
+                        }
+                        else
+                        {
+                            ElementId realPublie = TSH.Parameters.PublishReal(currentDoc, GapFini, gapFiniPublie);
+                            TSH.Elements.SetName(realPublie, GapFini);
+                            LogMessage($"Gap '{GapFini}' publié avec succès.", System.Drawing.Color.Green);
+                        }
                     }
                 }
 
@@ -1697,6 +1834,52 @@ namespace iFixInvalidity
         }
         #endregion
 
+        #region Recherche document en inclusion
+        //Fonction qui recupere le premier document en inclusion dans un .TopEld
+        private DocumentId GetFirstIncludedDocument(DocumentId currentDoc)
+        {
+            try
+            {
+                // Récupération de la liste des opérations dans le document courant
+                List<ElementId> operationIds = TSH.Operations.GetOperations(currentDoc);
+
+                // Parcours de chaque opération
+                foreach (ElementId operationId in operationIds)
+                {
+                    try
+                    {
+                        // Vérification si l'opération est une inclusion
+                        if (TSHD.Assemblies.IsInclusion(operationId))
+                        {
+                            // Récupération de l'ID du document enfant inclus
+                            ElementId documentChildId = TSHD.Assemblies.GetInclusionChildOccurrence(operationId);
+                            DocumentId documentId = TSHD.Assemblies.GetOccurrenceDefinition(documentChildId);
+
+                            if (documentId != DocumentId.Empty)
+                            {
+                                string docName = TSH.Documents.GetName(documentId);
+                                LogMessage($"Document en inclusion trouvé : {docName}", System.Drawing.Color.Green);
+                                return documentId;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LogMessage($"Erreur lors de la récupération de l'inclusion : {ex.Message}", System.Drawing.Color.Orange);
+                    }
+                }
+
+                LogMessage("Aucun document en inclusion trouvé.", System.Drawing.Color.Orange);
+                return DocumentId.Empty;
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Erreur dans GetFirstIncludedDocument : {ex.Message}", System.Drawing.Color.Red);
+                return DocumentId.Empty;
+            }
+        }
+        #endregion
+
         #region Recherche électrode en insertion
         //Fonction qui recupere l'elementId de l'electrode dans l'insertion
         private ElementId ElecsEnInsertionId(DocumentId currentDoc, HashSet<DocumentId> visitedDocs = null)
@@ -1818,7 +2001,7 @@ namespace iFixInvalidity
 
         #region Message confirmation création paramètres
         //Message de confirmation
-        private void MessageConfirmation(bool Indice_3DCreated, bool DesignationCreated, bool CommentaireCreated, bool OPIdCreated, bool Nom_ElecCreated, bool TotalBrutCreated, bool NomDocuCreated, string Indice_3DTxt, string DesignationTxt, string CommentaireTxt, string OPIdTxt, string Nom_ElecTxt, string TotalBrutTxt, string NomDocuTxt)
+        private void MessageConfirmation(bool Indice_3DCreated, bool DesignationCreated, bool CommentaireCreated, bool OPIdCreated, bool Nom_ElecCreated, bool TotalBrutCreated, bool NomDocuCreated, bool NbrPiecesCreated, string Indice_3DTxt, string DesignationTxt, string CommentaireTxt, string OPIdTxt, string Nom_ElecTxt, string TotalBrutTxt, string NomDocuTxt, string NbrPiecesTxt)
         {
             // Construction du message de confirmation
             string confirmationMessage = "Opérations de création de paramètres :\n";
@@ -1901,8 +2084,19 @@ namespace iFixInvalidity
                 LogMessage($"Paramètre '{NomDocuTxt}' existe déjà.", System.Drawing.Color.Black);
             }
 
+            if (NbrPiecesCreated)
+            {
+                confirmationMessage += $"{NbrPiecesTxt} : Créé avec succès.\n";
+                LogMessage($"Paramètre '{NbrPiecesTxt}' créé.", System.Drawing.Color.Green);
+            }
+            else
+            {
+                confirmationMessage += $"{NbrPiecesTxt} : Non créé, existe déjà.\n";
+                LogMessage($"Paramètre '{NbrPiecesTxt}' existe déjà.", System.Drawing.Color.Black);
+            }
+
             // Affichage du message de confirmation
-            if (Indice_3DCreated || DesignationCreated || CommentaireCreated || OPIdCreated || Nom_ElecCreated || TotalBrutCreated || NomDocuCreated)
+            if (Indice_3DCreated || DesignationCreated || CommentaireCreated || OPIdCreated || Nom_ElecCreated || TotalBrutCreated || NomDocuCreated || NbrPiecesCreated)
             {
                 LogMessage(confirmationMessage, System.Drawing.Color.Blue);
                 MessageBox.Show(confirmationMessage, "Confirmation", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -1996,11 +2190,12 @@ namespace iFixInvalidity
 
                 if (!string.IsNullOrEmpty(currentDoc.DocExtention))
                 {
+                    // Traitement des documents .TopPrt électrode
                     if (currentDoc.DocExtention == ".TopPrt") // Vérifie si c'est un document d'électrode
                     {
                         if (currentDoc.DocIsElectrode)
                         {
-                            LogMessage("Détection d'un document électrode.", System.Drawing.Color.Black);
+                            LogMessage("Détection d'un document électrode .TopPrt.", System.Drawing.Color.Black);
 
                             // CORRECTIF: On démarre la modification AVANT de chercher les opérations
                             if (!TopSolidHost.Application.StartModification("Déplacement d'opération", false))
@@ -2022,12 +2217,7 @@ namespace iFixInvalidity
                                     currentDoc.DocId = dirtyDocId; // Mise à jour de l'objet local
                                 }
 
-                                if (docMaster != DocumentId.Empty)
-                                {
-                                    docMaster = GetLastRevisionDoc(docMaster);
-                                    TopSolidHost.Documents.EnsureIsDirty(ref docMaster);
-                                    docMaster = GetLastRevisionDoc(docMaster);
-                                }
+                                // Note : On ne modifie JAMAIS le docMaster, on lit juste ses publications
 
                                 // 2. MAINTENANT, on recherche les opérations sur le document A JOUR (Dirty)
                                 string proprieteElecTxt = "TopSolid.Cad.Electrode.DB.PropertyData.PropertyDataOperation";
@@ -2060,6 +2250,9 @@ namespace iFixInvalidity
                                                     MessageBoxButtons.OK,
                                                     MessageBoxIcon.Warning);
                                     LogMessage("Propriétés électrode manquante.", System.Drawing.Color.Red);
+
+                                    // IMPORTANT : On bloque toutes les modifications si les propriétés électrode manquent
+                                    return;
                                 }
                                 else
                                 {
@@ -2081,6 +2274,10 @@ namespace iFixInvalidity
 
                                     TopSolidHost.Application.EndModification(true, true);
                                     LogMessage("Opération déplacée avec succès.", System.Drawing.Color.Green);
+
+                                    // Récupération des paramètres électrode - SEULEMENT si les propriétés sont OK
+                                    ParamElecListe(currentDoc.DocId);
+                                    GapPublish(currentDoc.DocId);
                                 }
                             }
                             catch (Exception ex)
@@ -2088,15 +2285,9 @@ namespace iFixInvalidity
                                 TopSolidHost.Application.EndModification(false, false);
                                 LogMessage($"Erreur lors du déplacement de l'opération : {ex.Message}", System.Drawing.Color.Red);
                             }
-
-                            // Récupération des paramètres électrode
-                            // (Ces fonctions doivent gérer leur propre StartModification ou être adaptées, 
-                            // mais on leur passe maintenant le bon DocId à jour au cas où)
-                            ParamElecListe(currentDoc.DocId);
-                            GapPublish(currentDoc.DocId);
                         }
                     }
-                    else // Autres types de documents
+                    else // Autres types de documents (incluant .TopEld)
                     {
                         LogMessage("Document non électrode détecté.", System.Drawing.Color.Black);
 
@@ -2106,16 +2297,23 @@ namespace iFixInvalidity
                         // Configuration des paramètres de dérivation
                         DerivationConfig(currentDoc.DocId);
 
-                        // Gestion du document maître
-                        if (docMaster != DocumentId.Empty)
+                        // Gestion du document maître - SAUF pour les .TopEld
+                        if (currentDoc.DocExtention != ".TopEld")
                         {
-                            // On tente d'ouvrir le document maître sans vérifier s'il est déjà ouvert
-                            TopSolidHost.Documents.Open(ref docMaster);
-                            LogMessage("Document maître ouvert automatiquement pour permettre la synchronisation.", System.Drawing.Color.Orange);
+                            if (docMaster != DocumentId.Empty)
+                            {
+                                // On tente d'ouvrir le document maître sans vérifier s'il est déjà ouvert
+                                TopSolidHost.Documents.Open(ref docMaster);
+                                LogMessage("Document maître ouvert automatiquement pour permettre la synchronisation.", System.Drawing.Color.Orange);
+                            }
+                            else
+                            {
+                                LogMessage("Aucun document maître trouvé.", System.Drawing.Color.Red);
+                            }
                         }
                         else
                         {
-                            LogMessage("Aucun document maître trouvé.", System.Drawing.Color.Red);
+                            LogMessage("Document .TopEld détecté : pas d'ouverture du document maître.", System.Drawing.Color.Black);
                         }
 
                         // Gestion du document de préparation
@@ -2129,19 +2327,20 @@ namespace iFixInvalidity
                             LogMessage("Aucun document de prépa trouvé.", System.Drawing.Color.Red);
                         }
 
-                        // Récupération des paramètres maîtres
-                        ElementId indice3D, commentaireOriginal, designationOriginal, OPOriginal, nomElecOriginal, nomDocuOriginal;
-                        ParametreMaster(in docMaster, in prepaDocument, out indice3D, out commentaireOriginal, out designationOriginal, out OPOriginal, out nomElecOriginal, out nomDocuOriginal);
+                        // Récupération des paramètres maîtres (incluant "Nombre de pièces" du master)
+                        ElementId indice3D, commentaireOriginal, designationOriginal, OPOriginal, nomElecOriginal, nomDocuOriginal, nombrePieces;
+                        ParametreMaster(in docMaster, in prepaDocument, out indice3D, out commentaireOriginal, out designationOriginal, out OPOriginal, out nomElecOriginal, out nomDocuOriginal, out nombrePieces);
 
                         // Création des SmartText
-                        SmartText[] SmartTxtTable = new SmartText[6]
+                        SmartText[] SmartTxtTable = new SmartText[7]
                         {
                             CreateSmartTxt(OPOriginal),         // Index 0
                             CreateSmartTxt(commentaireOriginal), // Index 1
                             CreateSmartTxt(designationOriginal), // Index 2
                             CreateSmartTxt(indice3D),            // Index 3
                             CreateSmartTxt(nomElecOriginal),    // Index 4
-                            CreateSmartTxt(nomDocuOriginal)      // Index 5
+                            CreateSmartTxt(nomDocuOriginal),     // Index 5
+                            CreateSmartTxt(nombrePieces)         // Index 6 - vient du master comme les autres
                         };
 
                         // Appliquer les paramètres SmartText au document courant
@@ -2223,7 +2422,8 @@ namespace iFixInvalidity
                 string Nom_ElecTxt = "Nom elec";
                 string TotalBrutTxt = "Total brut";
                 string NomDocuTxt = "Nom_docu";
-               
+                string NbrPiecesTxt = "Nbr. piéces";
+
 
                 // Initialisation des booléens pour suivre la création des paramètres
                 bool Indice_3DCreated = false;
@@ -2233,6 +2433,7 @@ namespace iFixInvalidity
                 bool Nom_ElecCreated = false;
                 bool TotalBrutCreated = false;
                 bool NomDocuCreated = false;
+                bool NbrPiecesCreated = false;
 
 
                 ElementId ModelingStage = new ElementId();
@@ -2295,6 +2496,7 @@ namespace iFixInvalidity
                 ElementId Nom_ElecExiste = TSH.Elements.SearchByName(currentDoc.DocId, Nom_ElecTxt);
                 ElementId TotalBrutExiste = TSH.Elements.SearchByName(currentDoc.DocId, TotalBrutTxt);
                 ElementId OPExiste = TSH.Elements.SearchByName(currentDoc.DocId, OPIdTxt);
+                ElementId NbrPiecesExiste = TSH.Elements.SearchByName(currentDoc.DocId, NbrPiecesTxt);
                
 
                 // Vérification si le document est une électrode
@@ -2444,6 +2646,31 @@ namespace iFixInvalidity
                         {
                             LogMessage($"Paramètre '{TotalBrutTxt}' existe déjà.", System.Drawing.Color.Black);
                         }
+
+                        // Création du paramètre "Nbr. pièces" pour les électrodes
+                        if (NbrPiecesExiste == ElementId.Empty)
+                        {
+                            if (currentDoc.DocIsElectrode || iselectrode)
+                            {
+                                ElementId NbrPiecesParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
+                                TSH.Elements.SetName(NbrPiecesParam, NbrPiecesTxt);
+                                TSH.Elements.SetDescription(NbrPiecesParam, NbrPiecesTxt);
+                                NbrPiecesCreated = true;
+                                LogMessage($"Paramètre '{NbrPiecesTxt}' créé.", System.Drawing.Color.Green);
+                                SmartText NbrPiecesSmartTxt = new SmartText(NbrPiecesParam);
+                                ElementId NbrPiecesSmartTxtId = TSH.Parameters.PublishText(currentDoc.DocId, NbrPiecesTxt, NbrPiecesSmartTxt);
+                                TSH.Elements.SetName(NbrPiecesSmartTxtId, NbrPiecesTxt);
+                                LogMessage($"Paramètre '{NbrPiecesTxt}' publié.", System.Drawing.Color.Green);
+                            }
+                            else
+                            {
+                                LogMessage($"Paramètre '{NbrPiecesTxt}' non créé, document non électrode.", System.Drawing.Color.Black);
+                            }
+                        }
+                        else
+                        {
+                            LogMessage($"Paramètre '{NbrPiecesTxt}' existe déjà.", System.Drawing.Color.Black);
+                        }
                     }
                 }
 
@@ -2530,7 +2757,7 @@ namespace iFixInvalidity
                             }
                         }
 
-                        MessageConfirmation(Indice_3DCreated, DesignationCreated, CommentaireCreated, OPIdCreated, Nom_ElecCreated, TotalBrutCreated, NomDocuCreated, Indice_3DTxt, DesignationTxt, CommentaireTxt, OPIdTxt, Nom_ElecTxt, TotalBrutTxt, NomDocuTxt);
+                        MessageConfirmation(Indice_3DCreated, DesignationCreated, CommentaireCreated, OPIdCreated, Nom_ElecCreated, TotalBrutCreated, NomDocuCreated, NbrPiecesCreated, Indice_3DTxt, DesignationTxt, CommentaireTxt, OPIdTxt, Nom_ElecTxt, TotalBrutTxt, NomDocuTxt, NbrPiecesTxt);
                     }
                     else
                     {
@@ -2620,7 +2847,8 @@ namespace iFixInvalidity
         private void button4_Click(object sender, EventArgs e)
         {
             Electrode electrode = new Electrode();
-            electrode.TraiterElectrodes(); // ✅ Exécute le code
+            SmartText nomDocu = electrode.TraiterElectrodes();
+            MessageBox.Show(nomDocu.Value.ToString().Trim());
         }
     }
 }
