@@ -985,12 +985,21 @@ namespace iFixInvalidity
                                 // MODIFICATION : On récupère la dernière révision au lieu de simplement recharger le document courant
                                 currentDoc = GetLastRevisionDoc(currentDoc);
                             }
+
+                            // MODIFICATION : On ne passe le docMaster en Dirty QUE pour les .TopEld
                             if (docMaster != DocumentId.Empty)
                             {
-                                // AJOUT : Mise à jour vers la dermière révision AVANT de rendre Dirty
-                                TopSolidHost.Documents.EnsureIsDirty(ref docMaster);
-                                docMaster = GetLastRevisionDoc(docMaster);
+                                // On vérifie l'extension du document courant pour ne pas impacter les autres documents
+                                PdmObjectId pdmObjectId = TSH.Documents.GetPdmObject(currentDoc);
+                                TSH.Pdm.GetType(pdmObjectId, out string docExt);
 
+                                // On ne passe le docMaster en Dirty QUE pour les assemblages d'électrodes (.TopEld)
+                                if (docExt == ".TopEld")
+                                {
+                                    // AJOUT : Mise à jour vers la dermière révision AVANT de rendre Dirty
+                                    TopSolidHost.Documents.EnsureIsDirty(ref docMaster);
+                                    docMaster = GetLastRevisionDoc(docMaster);
+                                }
                             }
 
                             // Finaliser la modification
@@ -1513,9 +1522,8 @@ namespace iFixInvalidity
                 catch (Exception ex)
                 {
                     // Log et affichage d'une erreur si la récupération du type échoue
-                    string errorMsg = $"Erreur : Impossible de récupérer le type de l'opération. {ex.Message}";
-                    LogMessage(errorMsg, System.Drawing.Color.Red); // Erreur en rouge
-                    MessageBox.Show(errorMsg, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    LogMessage($"Erreur : Impossible de récupérer le type de l'opération. {ex.Message}", System.Drawing.Color.Red);
+                    MessageBox.Show($"Erreur : Impossible de récupérer le type de l'opération. {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     continue; // Passe à l'opération suivante en cas d'erreur
                 }
             }
@@ -1532,41 +1540,18 @@ namespace iFixInvalidity
             // Liste pour stocker toutes les opérations du document
             List<ElementId> operations = new List<ElementId>();
 
-            // Récupération du stage de modélisation
+            // Récupérer le stage de modélisation
             ElementId modelingStage = TSH.Operations.GetModelingStage(currentDoc);
 
-            // Vérification si le stage de modélisation est vide
-            if (modelingStage == ElementId.Empty)
+            // Vérification si le stage est valide
+            if (modelingStage == null || modelingStage == ElementId.Empty)
             {
-                LogMessage("Le stage de modélisation est vide.", System.Drawing.Color.Red); // Erreur en rouge
-                return -1; // Retourne une valeur d'erreur si pas de stage valide
-            }
-
-            try
-            {
-                // Récupération de toutes les opérations du document
-                operations = TSH.Operations.GetOperations(currentDoc);
-
-                // Vérification si la liste des opérations est vide ou nulle
-                if (operations == null || operations.Count == 0)
-                {
-                    string errorMsg = "Erreur : Impossible de récupérer les opérations du document.";
-                    LogMessage(errorMsg, System.Drawing.Color.Red); // Erreur en rouge
-                    MessageBox.Show(errorMsg, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return -1; // Retourne -1 en cas d'erreur
-                }
-
-                // Log du nombre d'opérations récupérées
-                LogMessage($"Nombre d'opérations récupérées : {operations.Count}", System.Drawing.Color.Green); // Succès en vert
-            }
-            catch (Exception ex)
-            {
-                // Gestion des erreurs lors de la récupération des opérations
-                string errorMsg = $"Erreur lors de la récupération des opérations : {ex.Message}";
-                LogMessage(errorMsg, System.Drawing.Color.Red); // Erreur en rouge
-                MessageBox.Show(errorMsg, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LogMessage("Erreur : Le stage de modélisation est invalide.", System.Drawing.Color.Red);
                 return -1;
             }
+
+            // Récupération de toutes les opérations du document
+            operations = TSH.Operations.GetOperations(currentDoc);
 
             // Filtrage des opérations qui appartiennent au modeling stage
             List<ElementId> modelingStageOperations = operations.Where(op => TSH.Elements.GetOwner(op).Equals(modelingStage)).ToList();
@@ -1808,9 +1793,9 @@ namespace iFixInvalidity
                 }
             }
             catch (Exception ex)
-            {
+ {
                 // Log et affichage d'une erreur si la récupération du document échoue
-                LogMessage($"Une erreur s'est produite : {ex.Message}", System.Drawing.Color.Red); // Erreur en rouge
+                LogMessage($"Une erreur s'est produite : {ex.Message}", System.Drawing.Color.Red);
                 MessageBox.Show($"Une erreur s'est produite : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
@@ -1842,15 +1827,32 @@ namespace iFixInvalidity
                         // Vérification si l'opération est une inclusion
                         if (TSHD.Assemblies.IsInclusion(operationId))
                         {
-                            // Récupération de l'ID du document enfant inclus
-                            ElementId documentChildId = TSHD.Assemblies.GetInclusionChildOccurrence(operationId);
-                            DocumentId documentId = TSHD.Assemblies.GetOccurrenceDefinition(documentChildId);
+                            // Récupération de l'élément de l'inclusion
+                            ElementId insertedElementId = TSHD.Assemblies.GetInclusionChildOccurrence(operationId);
+                            // Récupération de l'instance du document associé
+                            DocumentId instanceDocument = TSHD.Assemblies.GetOccurrenceDefinition(insertedElementId);
 
-                            if (documentId != DocumentId.Empty)
+                            // Récupération du PdmObjectId associé
+                            PdmObjectId pdmObjectId = TSH.Documents.GetPdmObject(instanceDocument);
+
+                            // Récupération de l'extension du document
+                            TSH.Pdm.GetType(pdmObjectId, out string DocumentExt);
+
+                            // Si c'est un fichier pièce, renvoyer le document ID
+                            if (DocumentExt == ".TopPrt")
                             {
-                                string docName = TSH.Documents.GetName(documentId);
-                                LogMessage($"Document en inclusion trouvé : {docName}", System.Drawing.Color.Green);
-                                return documentId;
+                                LogMessage($"Document pièce trouvé : {instanceDocument}", System.Drawing.Color.Green);
+                                return instanceDocument;
+                            }
+                            // Si c'est un document de prépa, relancer la fonction (mais on ne doit pas y arriver ici normalement)
+                            if (DocumentExt == ".TopNewPrtSet")
+                            {
+                                LogMessage($"Document de prépa trouvé : {instanceDocument}", System.Drawing.Color.Green);
+                                var result = RecupDocuMaster(instanceDocument);
+                                if (result.docMaster != DocumentId.Empty)
+                                {
+                                    return result.docMaster;
+                                }
                             }
                         }
                     }
@@ -1897,7 +1899,7 @@ namespace iFixInvalidity
                     // Vérification si l'opération est une inclusion
                     if (TSHD.Assemblies.IsInclusion(operationId))
                     {
-                        // Récupération de l'ID du document enfant inclus
+                        // Récupération de l'élément de l'inclusion
                         ElementId documentChildId = TSHD.Assemblies.GetInclusionChildOccurrence(operationId);
                         DocumentId documentId = documentChildId.DocumentId;
 
@@ -2283,21 +2285,12 @@ namespace iFixInvalidity
                         // Configuration des paramètres de dérivation
                         DerivationConfig(currentDoc.DocId);
 
-                        // Gestion du document maître - SAUF pour les .TopEld
-                        if (currentDoc.DocExtention != ".TopEld")
+                        // Gestion du document maître : on n'ouvre plus le document pour les usinages/prépas
+                        if (docMaster == DocumentId.Empty)
                         {
-                            if (docMaster != DocumentId.Empty)
-                            {
-                                // On tente d'ouvrir le document maître sans vérifier s'il est déjà ouvert
-                                TopSolidHost.Documents.Open(ref docMaster);
-                                LogMessage("Document maître ouvert automatiquement pour permettre la synchronisation.", System.Drawing.Color.Orange);
-                            }
-                            else
-                            {
-                                LogMessage("Aucun document maître trouvé.", System.Drawing.Color.Red);
-                            }
+                            LogMessage("Aucun document maître trouvé.", System.Drawing.Color.Red);
                         }
-                        else
+                        else if (currentDoc.DocExtention == ".TopEld")
                         {
                             LogMessage("Document .TopEld détecté : pas d'ouverture du document maître.", System.Drawing.Color.Black);
                         }
@@ -2307,10 +2300,6 @@ namespace iFixInvalidity
                         {
                             string docPrepaName = TSH.Documents.GetName(prepaDocument);
                             LogMessage($"Document de prépa trouvé : {docPrepaName}", System.Drawing.Color.Black);
-                        }
-                        else
-                        {
-                            LogMessage("Aucun document de prépa trouvé.", System.Drawing.Color.Red);
                         }
 
                         // Récupération des paramètres maîtres (incluant "Nombre de pièces" du master)
@@ -2337,7 +2326,7 @@ namespace iFixInvalidity
             }
             catch (Exception ex)
             {
-                // Log et affichage d'une erreur inattendue
+                // Log et affichage d'une erreur en cas d'exception
                 LogMessage($"Erreur inattendue : {ex.Message}", System.Drawing.Color.Red);
             }
         }
