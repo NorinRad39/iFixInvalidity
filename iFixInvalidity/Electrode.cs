@@ -29,7 +29,7 @@ namespace iFixInvalidity
     /// Classe permettant de traiter et d'identifier les ensembles d'électrodes
     /// qui référencent le document actif dans TopSolid.
     /// </summary>
-    public class Electrode
+    internal class Electrode
     {
         /// <summary>
         /// Extension de fichier pour les documents d'ensemble d'électrodes TopSolid.
