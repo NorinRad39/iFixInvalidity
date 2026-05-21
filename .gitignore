@@ -361,3 +361,14 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# DocFX - dossiers générés (recréés automatiquement)
+_site_ifix/
+_site_outilsts/
+api/
+docfx_stage_ifix/
+docfx_index/
+
+# DocFX - cache metadata
+obj/xdoc/
+.docfx/
+

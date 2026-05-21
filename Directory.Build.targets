@@ -1,0 +1,37 @@
+<!--
+  Ce fichier est automatiquement importé par MSBuild pour tous les projets du répertoire.
+  Il déclenche la génération de la documentation DocFX après chaque build réussi,
+  sans jamais bloquer ni faire échouer le build principal.
+-->
+<Project>
+
+  <Target Name="GenerateDocFX"
+		  AfterTargets="Build"
+		  Condition="'$(GenerateDocFXEnabled)' != 'false'">
+
+	<PropertyGroup>
+	  <!-- Chemin absolu vers generate-docs.ps1 (à côté de ce fichier) -->
+	  <DocFXScript>$(MSBuildThisFileDirectory)generate-docs.ps1</DocFXScript>
+	  <!-- PowerShell 7+ (pwsh) en priorité, sinon PowerShell 5 (powershell) -->
+	  <PwshExe Condition="Exists('$(ProgramFiles)\PowerShell\7\pwsh.exe')">$(ProgramFiles)\PowerShell\7\pwsh.exe</PwshExe>
+	  <PwshExe Condition="'$(PwshExe)' == '' AND Exists('$(ProgramW6432)\PowerShell\7\pwsh.exe')">$(ProgramW6432)\PowerShell\7\pwsh.exe</PwshExe>
+	  <PwshExe Condition="'$(PwshExe)' == ''">powershell</PwshExe>
+	</PropertyGroup>
+
+	<Message Text="[DocFX] Déclenchement de la génération de documentation (Configuration=$(Configuration), Platform=$(Platform))..." Importance="normal" />
+
+	<!--
+	  Lance generate-docs.ps1 en arrière-plan (Start-Process) pour ne pas ralentir VS.
+	  -Project iFixInvalidity : ne génère que ce projet à chaque build.
+	  ContinueOnError="true"  : ne jamais bloquer le build si docfx échoue.
+	-->
+	<Exec
+	  Command="&quot;$(PwshExe)&quot; -NoProfile -ExecutionPolicy Bypass -Command &quot;Start-Process -FilePath '$(PwshExe)' -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','$(DocFXScript)','-Project','iFixInvalidity','-Configuration','$(Configuration)','-Platform','$(Platform)' -WindowStyle Hidden&quot;"
+	  ContinueOnError="true"
+	  IgnoreExitCode="true" />
+
+	<Message Text="[DocFX] Documentation lancée en arrière-plan. Résultat disponible dans _site_ifix/." Importance="normal" />
+
+  </Target>
+
+</Project>

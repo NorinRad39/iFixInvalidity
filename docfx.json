@@ -1,0 +1,22 @@
+{
+  "metadata": [
+    {
+      "src": [
+        { "files": [ "docfx_stage_ifix/iFixInvalidity.exe" ] }
+      ],
+      "dest": "api",
+      "disableGitFeatures": true
+    }
+  ],
+  "build": {
+    "content": [
+      { "files": ["api/**.yml", "api/index.md"] },
+      { "files": ["toc.yml", "index.md"] }
+    ],
+    "dest": "_site_ifix",
+    "globalMetadata": {
+      "_appTitle": "iFixInvalidity Documentation"
+    },
+    "disableGitFeatures": true
+  }
+}
