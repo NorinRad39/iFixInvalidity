@@ -30,9 +30,15 @@ namespace iFixInvalidity
     public partial class Form1 : Form
     {
         #region Champs privés / propriétés
-        public object TopSolidDesign { get; private set; }
+        /// <summary>
+        /// Obtient ou définit la référence à l'objet TopSolid Design.
+        /// </summary>
+        /// <value>
+        /// Objet représentant l'instance de TopSolid Design, ou <c>null</c> si non initialisé.
+        /// </value>
+        private object TopSolidDesign { get; set; }
 
-       
+   
         Document currentDoc;
         DocumentId docMaster = DocumentId.Empty;
         DocumentId prepaDocument = DocumentId.Empty;
@@ -51,6 +57,22 @@ namespace iFixInvalidity
         }
 
         // AJOUT : Méthode pour gérer la déconnexion propre
+
+        /// <summary>
+        /// Gestionnaire de l'événement <see cref="Form.FormClosing"/> de la fenêtre principale.
+        /// </summary>
+        /// <param name="sender">L'expéditeur de l'événement (généralement l'instance de <see cref="Form1"/>).</param>
+        /// <param name="e">Arguments de l'événement de fermeture (<see cref="FormClosingEventArgs"/>).</param>
+        /// <remarks>
+        /// Cette méthode tente d'effectuer une déconnexion propre des hôtes TopSolid utilisés par l'application :
+        /// - Déconnexion du module Electrode via <c>TopSolidElectrodeHost.Disconnect()</c> si <c>TopSolidElectrodeHost.IsConnected</c> est vrai.
+        /// - Déconnexion du host principal via <c>TopSolidHost.Disconnect()</c> si <c>TopSolidHost.IsConnected</c> est vrai.
+        ///
+        /// Les erreurs rencontrées lors de la déconnexion sont capturées et écrites dans le flux de debug afin de ne pas bloquer la fermeture de la fenêtre.
+        /// Un message de log est ajouté en début d'opération pour indiquer la tentative de déconnexion.
+        ///
+        /// Cette méthode est abonnée dans le constructeur : <c>this.FormClosing += Form1_FormClosing;</c>
+        /// </remarks>
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             try
@@ -76,6 +98,20 @@ namespace iFixInvalidity
             }
         }
 
+                /// <summary>
+        /// Gestionnaire de l'événement <see cref="Form.Shown"/>.
+        /// Initialise la connexion à TopSolid après l'affichage de la fenêtre et charge le document courant si présent.
+        /// </summary>
+        /// <param name="sender">L'expéditeur de l'événement (généralement l'instance de <see cref="Form1"/>).</param>
+        /// <param name="e">Arguments de l'événement (<see cref="EventArgs"/>).</param>
+        /// <remarks>
+        /// Comportement détaillé :
+        /// - Change le curseur en <see cref="Cursors.WaitCursor"/> pour indiquer une opération longue et force le rafraîchissement de l'interface avec <c>Application.DoEvents()</c>.
+        /// - Tente d'établir les connexions nécessaires en appelant <c>connexion()</c> puis <c>ConnectToTopSolidElectrodeHost()</c>.
+        /// - Initialise une instance de <c>Document</c> et récupère son identifiant via <c>TSH.Documents.EditedDocument</c>.
+        /// - Si un document est ouvert (<see cref="DocumentId.Empty"/> non rencontré), affiche le nom du document, le nom du document maître et appelle <c>RecupDocuMaster</c> pour récupérer le document maître et le document de préparation.
+        /// - Les erreurs sont interceptées, loggées via <c>LogMessage</c> et n'empêchent pas la fermeture de la fenêtre. Le curseur est rétabli dans le bloc <c>finally</c>.
+        /// </remarks>
         private void Form1_Shown(object sender, EventArgs e)
         {
             // Changement du curseur pour indiquer un chargement
@@ -132,69 +168,94 @@ namespace iFixInvalidity
         }
 
         //Connexion a top electrode
-        private void ConnectToTopSolidElectrodeHost()
+/// <summary>
+/// Établit une connexion au module Electrode de TopSolid si elle n'est pas déjà présente.
+/// </summary>
+/// <remarks>
+/// - Vérifie l'état via <c>TopSolidElectrodeHost.IsConnected</c>.
+/// - Tente d'appeler <c>TopSolidElectrodeHost.Connect()</c> si aucune connexion n'est active.
+/// - Loggue le résultat via <c>LogMessage</c> et affiche des boîtes de dialogue utilisateur en cas d'erreur ou d'état déjà connecté.
+/// - Cette méthode capture les exceptions pour éviter de remonter des erreurs non gérées vers l'interface utilisateur.
+/// - Effets de bord : écrit dans le flux de log et peut afficher des <see cref="MessageBox"/>.
+/// </remarks>
+/// <exception cref="InvalidOperationException">
+/// Une exception opérationnelle spécifique remontée par l'API TopSolid peut être interceptée et logguée.
+/// </exception>
+/// <exception cref="Exception">
+/// Toutes les autres exceptions sont interceptées, logguées et affichées à l'utilisateur.
+/// </exception>
+private void ConnectToTopSolidElectrodeHost()
+{
+    try
+    {
+        // Vérifier si la connexion est déjà établie
+        if (!TopSolidElectrodeHost.IsConnected)
         {
-            try
-            {
-                // Vérifier si la connexion est déjà établie
-                if (!TopSolidElectrodeHost.IsConnected)
-                {
-                    // Connexion à TopSolid avec un paramètre d'initialisation (si nécessaire)
-                    TopSolidElectrodeHost.Connect();
+            // Connexion à TopSolid avec un paramètre d'initialisation (si nécessaire)
+            TopSolidElectrodeHost.Connect();
 
-                    // Vérifier à nouveau si la connexion est réussie
-                    if (TopSolidElectrodeHost.IsConnected)
-                    {
-                        LogMessage("Connexion réussie à TopSolid module design.", System.Drawing.Color.Green);
-                        // MessageBox.Show("Connexion réussie à TopSolid module design.", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                    else
-                    {
-                        LogMessage("Connexion échouée à TopSolid module design.", System.Drawing.Color.Red);
-                        MessageBox.Show("Connexion échouée à TopSolid module design.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-                else
-                {
-                    LogMessage("TopSolid module design est déjà connecté.", System.Drawing.Color.Orange);
-                    MessageBox.Show("TopSolid module design est déjà connecté.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-            }
-            catch (InvalidOperationException ex)
+            // Vérifier à nouveau si la connexion est réussie
+            if (TopSolidElectrodeHost.IsConnected)
             {
-                // Gérer une exception spécifique si nécessaire
-                LogMessage($"Problème opérationnel : {ex.Message}", System.Drawing.Color.Red);
-                MessageBox.Show($"Problème opérationnel : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LogMessage("Connexion réussie à TopSolid module design.", System.Drawing.Color.Green);
+                // MessageBox.Show("Connexion réussie à TopSolid module design.", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-            catch (Exception ex)
+            else
             {
-                // Gérer d'autres exceptions
-                LogMessage($"Erreur lors de la connexion à TopSolid module design : {ex.Message}", System.Drawing.Color.Red);
-                MessageBox.Show($"Erreur lors de la connexion à TopSolid module design : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LogMessage("Connexion échouée à TopSolid module design.", System.Drawing.Color.Red);
+                MessageBox.Show("Connexion échouée à TopSolid module design.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+        else
+        {
+            LogMessage("TopSolid module design est déjà connecté.", System.Drawing.Color.Orange);
+            MessageBox.Show("TopSolid module design est déjà connecté.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+    }
+    catch (InvalidOperationException ex)
+    {
+        // Gérer une exception spécifique si nécessaire
+        LogMessage($"Problème opérationnel : {ex.Message}", System.Drawing.Color.Red);
+        MessageBox.Show($"Problème opérationnel : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+    catch (Exception ex)
+    {
+        // Gérer d'autres exceptions
+        LogMessage($"Erreur lors de la connexion à TopSolid module design : {ex.Message}", System.Drawing.Color.Red);
+        MessageBox.Show($"Erreur lors de la connexion à TopSolid module design : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+}
         #endregion
 
         #region Accès Document courant / Nom
-        // Récupère l'identifiant du document courant.
-        private DocumentId DocumentCourant()
-        {
-            try
-            {
-                // Récupération de l'ID du document courant en cours d'édition
-                DocumentId documentId = TopSolidHost.Documents.EditedDocument;
-                LogMessage("Document courant récupéré avec succès.", System.Drawing.Color.Green);
-                return documentId;
-            }
-            catch (Exception ex)
-            {
-                // Log et affichage d'une erreur si la récupération échoue
-                LogMessage($"Erreur lors de la récupération du document courant : {ex.Message}", System.Drawing.Color.Red);
-                MessageBox.Show($"Erreur lors de la récupération du document courant : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return DocumentId.Empty;
-            }
-        }
-
+/// <summary>
+/// Récupère l'identifiant du document actuellement en cours d'édition dans TopSolid.
+/// </summary>
+/// <returns>
+/// L'<see cref="DocumentId"/> du document édité. Retourne <see cref="DocumentId.Empty"/> si la récupération échoue ou si aucun document n'est ouvert.
+/// </returns>
+/// <remarks>
+/// - Utilise <c>TopSolidHost.Documents.EditedDocument</c> pour obtenir l'ID du document actif.
+/// - En cas d'exception, la méthode journalise l'erreur via <c>LogMessage</c>, affiche une boîte de dialogue d'erreur et renvoie <see cref="DocumentId.Empty"/>.
+/// - Conçue pour être appelée depuis l'interface utilisateur; elle protège l'appelant contre les exceptions en les gérant localement.
+/// </remarks>
+private DocumentId DocumentCourant()
+{
+    try
+    {
+        // Récupération de l'ID du document courant en cours d'édition
+        DocumentId documentId = TopSolidHost.Documents.EditedDocument;
+        LogMessage("Document courant récupéré avec succès.", System.Drawing.Color.Green);
+        return documentId;
+    }
+    catch (Exception ex)
+    {
+        // Log et affichage d'une erreur si la récupération échoue
+        LogMessage($"Erreur lors de la récupération du document courant : {ex.Message}", System.Drawing.Color.Red);
+        MessageBox.Show($"Erreur lors de la récupération du document courant : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        return DocumentId.Empty;
+    }
+}
         #endregion
 
         #region Récupération Master / Prépa (récursif)
@@ -202,6 +263,39 @@ namespace iFixInvalidity
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         //Fonction recurcive pour remonter au document piece original-------------------------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        /// <summary>
+        /// Remonte récursivement l'arbre d'assemblage pour retrouver :
+        /// - le premier document de préparation rencontré (<c>PrepaDocument</c>) ; et
+        /// - le document pièce maître final (<c>docMaster</c>).
+        /// </summary>
+        /// <param name="currentDoc">
+        /// Identifiant du document à partir duquel démarrer la recherche.
+        /// Peut être un document dérivé ou un document d'assemblage contenant des inclusions.
+        /// </param>
+        /// <param name="firstPrepaDocumentFound">
+        /// Drapeau interne utilisé lors de la récursivité pour mémoriser si un document de prépa a déjà été trouvé.
+        /// Par défaut <c>false</c> pour le premier appel.
+        /// </param>
+        /// <returns>
+        /// Tuple contenant :
+        /// - <c>PrepaDocument</c> : <see cref="DocumentId"/> du premier document de préparation trouvé ou <c>DocumentId.Empty</c> si aucun ;
+        /// - <c>docMaster</c> : <see cref="DocumentId"/> du document pièce maître trouvé (.TopPrt) ou <c>DocumentId.Empty</c> si aucun.
+        /// </returns>
+        /// <remarks>
+        /// Algorithme :
+        /// 1. Si le document est dérivé (vérifié via <c>TSHD.Tools.IsDerived</c>), la recherche commence par le document de base obtenu via <c>TSHD.Tools.GetBaseDocument</c> (appel récursif).
+        /// 2. Sinon, la méthode parcourt la liste des opérations du document (via <see cref="OperationsList"/>).
+        ///    - Pour chaque opération de type inclusion, on récupère l'occurrence enfant et son document défini.
+        ///    - On interroge le PDM pour obtenir l'extension du document (<c>TSH.Pdm.GetType</c>) :
+        ///       - si l'extension est <c>".TopPrt"</c> : on considère qu'il s'agit du document pièce maître et on renvoie immédiatement ce <c>DocumentId</c>.
+        ///       - si l'extension est <c>".TopNewPrtSet"</c> (document de prépa) : on mémorise le premier prépa rencontré puis on relance la recherche récursivement dans ce document de prépa pour tenter d'atteindre le <c>.TopPrt</c> maître.
+        /// 3. À chaque fois que l'on identifie un <c>docMaster</c>, on tente de le mettre à jour vers sa dernière révision via <see cref="GetLastRevisionDoc"/>.
+        /// 
+        /// Comportement attendu :
+        /// - Ne lève pas d'exception vers l'appelant : les erreurs sont journalisées et, si nécessaire, affichées à l'utilisateur.
+        /// - Retourne un tuple de valeurs par défaut (<c>DocumentId.Empty</c>, <c>DocumentId.Empty</c>) si rien n'est trouvé ou si le document d'entrée est invalide.
+        /// - Conçu pour fonctionner sur des documents TopSolid contenant des inclusions/occurrences et pour suivre la chaîne de prépa → master.
+        /// </remarks>
         private (DocumentId PrepaDocument, DocumentId docMaster) RecupDocuMaster(DocumentId currentDoc, bool firstPrepaDocumentFound = false)
         {
             DocumentId prepaDocument = DocumentId.Empty;
@@ -305,6 +399,26 @@ namespace iFixInvalidity
         }
 
         // Fonction utilitaire pour récupérer l'ID de la dernière révision mineure de la dernière majeure
+        /// <summary>
+        /// Obtient l'<see cref="DocumentId"/> correspondant à la dernière révision mineure finale
+        /// du document PDM fourni.
+        /// </summary>
+        /// <param name="docId">Identifiant du document source pour lequel on recherche la dernière révision mineure.</param>
+        /// <returns>
+        /// L'<see cref="DocumentId"/> de la dernière révision mineure finale si elle existe ;
+        /// <see cref="DocumentId.Empty"/> si <paramref name="docId"/> vaut <see cref="DocumentId.Empty"/> ;
+        /// sinon retourne le <paramref name="docId"/> original en cas d'erreur (par ex. document non géré par le PDM).
+        /// </returns>
+        /// <remarks>
+        /// Implémente la logique suivante :
+        /// - Récupère l'objet PDM associé au <paramref name="docId"/> via <c>TSH.Documents.GetPdmObject</c>.
+        /// - Demande l'identifiant de la dernière révision mineure finale via <c>TSH.Pdm.GetFinalMinorRevision</c>.
+        /// - Convertit cet identifiant de révision en <see cref="DocumentId"/> via <c>TopSolidHost.Documents.GetMinorRevisionDocument</c>.
+        /// 
+        /// En cas d'erreur (par exemple si le document n'est pas géré par le PDM), la méthode journalise l'information
+        /// et renvoie l'<paramref name="docId"/> fourni sans lever d'exception, garantissant ainsi un comportement sûr
+        /// pour les appels depuis l'interface utilisateur ou des routines de traitement.
+        /// </remarks>
         private DocumentId GetLastRevisionDoc(DocumentId docId)
         {
             if (docId == DocumentId.Empty) return DocumentId.Empty;
@@ -328,6 +442,25 @@ namespace iFixInvalidity
         }
 
         // Récupère la liste des opérations d'un document
+        /// <summary>
+        /// Récupère la liste des opérations associées au <paramref name="currentDoc"/> dans TopSolid.
+        /// </summary>
+        /// <param name="currentDoc">Identifiant du document TopSolid dont on souhaite récupérer les opérations.</param>
+        /// <returns>
+        /// Une <see cref="List{ElementId}"/> contenant les identifiants des opérations si la récupération réussit ;
+        /// une liste vide si le document fourni est invalide ou si une erreur survient.
+        /// </returns>
+        /// <remarks>
+        /// Comportement :
+        /// - Vérifie que <paramref name="currentDoc"/> n'est ni <c>null</c> ni <see cref="DocumentId.Empty"/> avant d'interroger l'API TopSolid.
+        /// - Utilise <c>TSH.Operations.GetOperations(currentDoc)</c> pour obtenir la liste des opérations.
+        /// - En cas de succès, journalise via <c>LogMessage</c> et renvoie la liste.
+        /// - En cas d'exception, capture l'erreur, la journalise, affiche une boîte de dialogue d'erreur à l'utilisateur et renvoie une liste vide.
+        /// - Cette méthode nèveille pas d'exception vers l'appelant (elle gère localement les erreurs) afin d'être sûre pour un appel depuis l'UI.
+        /// Effets de bord :
+        /// - Écrit dans le log avec <c>LogMessage</c>.
+        /// - Peut afficher un <see cref="MessageBox"/> en cas d'erreur.
+        /// </remarks>
         private List<ElementId> OperationsList(DocumentId currentDoc)
         {
             // Vérification que le document courant est valide
@@ -371,147 +504,173 @@ namespace iFixInvalidity
         #endregion
 
         #region Paramètres master / prépa
-        //Recuperation des parametre dans le document maitre
-        private void ParametreMaster(in DocumentId docMaster, in DocumentId PrepaDocument, out ElementId indice3D, out ElementId commentaireOriginal, out ElementId designationOriginal, out ElementId OPOriginal, out ElementId nomElecOriginal, out ElementId nomDocuOriginal, out ElementId nombrePieces)
+/// <summary>
+/// Récupère dans le <c>docMaster</c> (et éventuellement dans le <c>PrepaDocument</c>) les <c>ElementId</c> des paramètres publiés pertinents.
+/// </summary>
+/// <param name="docMaster">Identifiant du document maître (peut être <c>DocumentId.Empty</c>).</param>
+/// <param name="PrepaDocument">Identifiant du document de préparation (peut être <c>DocumentId.Empty</c>).</param>
+/// <param name="indice3D">Sortie : <c>ElementId</c> du paramètre correspondant à <c>Indice_3D</c> si trouvé, sinon nouvelle instance <c>ElementId</c>.</param>
+/// <param name="commentaireOriginal">Sortie : <c>ElementId</c> du paramètre correspondant à <c>Commentaire</c> si trouvé, sinon nouvelle instance <c>ElementId</c>.</param>
+/// <param name="designationOriginal">Sortie : <c>ElementId</c> du paramètre correspondant à <c>Designation</c> si trouvé, sinon nouvelle instance <c>ElementId</c>.</param>
+/// <param name="OPOriginal">Sortie : <c>ElementId</c> du paramètre correspondant à <c>OP</c> si trouvé (recherche dans le master puis dans le document de prépa), sinon nouvelle instance <c>ElementId</c>.</param>
+/// <param name="nomElecOriginal">Sortie : <c>ElementId</c> du paramètre correspondant à <c>nomElec</c> si trouvé, sinon nouvelle instance <c>ElementId</c>.</param>
+/// <param name="nomDocuOriginal">Sortie : <c>ElementId</c> du paramètre correspondant à <c>Nomdocu</c> si trouvé, sinon nouvelle instance <c>ElementId</c>.</param>
+/// <param name="nombrePieces">Sortie : <c>ElementId</c> du paramètre correspondant à <c>NombrePieces</c> si trouvé, sinon nouvelle instance <c>ElementId</c>.</param>
+/// <remarks>
+/// Comportement :
+/// - Si <c>PrepaDocument</c> est fourni, affiche son nom (via <c>TSH.Documents.GetName</c>) et positionne le drapeau <c>prepaTrouvé</c>.
+/// - Initialise tous les paramètres de sortie à de nouvelles instances <c>ElementId</c> par défaut.
+/// - Récupère la liste des publications du document maître (via <c>TSH.Entities.GetPublishings</c>) et, si présent, du document de prépa.
+/// - Parcourt la liste des paramètres publiés du maître pour identifier les éléments correspondant aux noms déclarés (voir champs : <c>Indice_3D</c>, <c>Commentaire</c>, <c>Designation</c>, <c>nomElec</c>, <c>Nomdocu</c>, <c>NombrePieces</c>).
+/// - Si un <c>PrepaDocument</c> est présent et que <c>OPOriginal</c> n'a pas encore été trouvé, tente de récupérer le paramètre <c>OP</c> :
+///     - Si le document de prépa est dérivé (<c>TSHD.Tools.IsDerived</c>), recherche parmi les paramètres du document dérivé (<c>TSH.Parameters.GetParameters</c>).
+///     - Sinon, recherche dans la liste des publications du document de prépa.
+/// - Ajoute des logs via <c>LogMessage</c> pour chaque paramètre trouvé et gère les exceptions locales en journalisant et affichant des <c>MessageBox</c>.
+/// - Si la liste des publications du maître est vide, renseigne les paramètres principaux à des valeurs par défaut et notifie l'utilisateur.
+/// </remarks>
+/// <exception cref="Exception">
+/// Les exceptions internes sont capturées et logguées ; des boîtes de dialogue sont affichées pour alerter l'utilisateur. La méthode n'émet pas d'exception non gérée vers l'appelant.
+/// </exception>
+private void ParametreMaster(in DocumentId docMaster, in DocumentId PrepaDocument, out ElementId indice3D, out ElementId commentaireOriginal, out ElementId designationOriginal, out ElementId OPOriginal, out ElementId nomElecOriginal, out ElementId nomDocuOriginal, out ElementId nombrePieces)
+{
+    // Affichage du nom du document de préparation s'il est valide
+    if (PrepaDocument != DocumentId.Empty)
+    {
+        string nomDocPrepa = TSH.Documents.GetName(PrepaDocument);
+        MessageBox.Show(nomDocPrepa);
+        prepaTrouvé = true;
+    }
+
+    // Initialisation des paramètres out avec des valeurs par défaut
+    indice3D = new ElementId();
+    commentaireOriginal = new ElementId();
+    designationOriginal = new ElementId();
+    OPOriginal = new ElementId();
+    nomElecOriginal = new ElementId();
+    nomDocuOriginal = new ElementId();
+    nombrePieces = new ElementId();
+
+    List<ElementId> ParameterPubliéList = new List<ElementId>();
+
+    // Recherche des paramètres publiés dans le document maître
+    if (docMaster != DocumentId.Empty)
+    {
+        ParameterPubliéList = TSH.Entities.GetPublishings(docMaster);
+    }
+
+    List<ElementId> ParameterPubliéListPrepaDocument = new List<ElementId>();
+    if (prepaTrouvé)
+    {
+        ParameterPubliéListPrepaDocument = TSH.Entities.GetPublishings(PrepaDocument);
+    }
+
+    bool opOriginalFound = false; // Drapeau pour indiquer si OPOriginal a été trouvé
+
+    // Si la liste des paramètres publiés n'est pas vide
+    if (ParameterPubliéList.Count > 0)
+    {
+        try
         {
-            // Affichage du nom du document de préparation s'il est valide
-            if (PrepaDocument != DocumentId.Empty)
+            // Pour chaque paramètre publié
+            foreach (ElementId Parameter in ParameterPubliéList)
             {
-                string nomDocPrepa = TSH.Documents.GetName(PrepaDocument);
-                MessageBox.Show(nomDocPrepa);
-                prepaTrouvé = true;
-            }
+                // Récupération du nom de chaque paramètre publié pour comparaison
+                string ParameterName = TSH.Elements.GetFriendlyName(Parameter);
 
-            // Initialisation des paramètres out avec des valeurs par défaut
-            indice3D = new ElementId();
-            commentaireOriginal = new ElementId();
-            designationOriginal = new ElementId();
-            OPOriginal = new ElementId();
-            nomElecOriginal = new ElementId();
-            nomDocuOriginal = new ElementId();
-            nombrePieces = new ElementId();
-
-            List<ElementId> ParameterPubliéList = new List<ElementId>();
-
-            // Recherche des paramètres publiés dans le document maître
-            if (docMaster != DocumentId.Empty)
-            {
-                ParameterPubliéList = TSH.Entities.GetPublishings(docMaster);
-            }
-
-            List<ElementId> ParameterPubliéListPrepaDocument = new List<ElementId>();
-            if (prepaTrouvé)
-            {
-                ParameterPubliéListPrepaDocument = TSH.Entities.GetPublishings(PrepaDocument);
-            }
-
-            bool opOriginalFound = false; // Drapeau pour indiquer si OPOriginal a été trouvé
-
-            // Si la liste des paramètres publiés n'est pas vide
-            if (ParameterPubliéList.Count > 0)
-            {
-                try
+                // Si le nom du paramètre est égal au nom attendu, renvoyer l'Element ID
+                if (ParameterName == Indice_3D)
                 {
-                    // Pour chaque paramètre publié
-                    foreach (ElementId Parameter in ParameterPubliéList)
-                    {
-                        // Récupération du nom de chaque paramètre publié pour comparaison
-                        string ParameterName = TSH.Elements.GetFriendlyName(Parameter);
+                    indice3D = Parameter;
+                    LogMessage($"Paramètre '{Indice_3D}' trouvé.", System.Drawing.Color.Green);
+                }
+                if (ParameterName == Commentaire)
+                {
+                    commentaireOriginal = Parameter;
+                    LogMessage($"Paramètre '{Commentaire}' trouvé.", System.Drawing.Color.Green);
+                }
+                if (ParameterName == Designation)
+                {
+                    designationOriginal = Parameter;
+                    LogMessage($"Paramètre '{Designation}' trouvé.", System.Drawing.Color.Green);
+                }
+                if (ParameterName == nomElec)
+                {
+                    nomElecOriginal = Parameter;
+                    LogMessage($"Paramètre '{nomElec}' trouvé.", System.Drawing.Color.Green);
+                }
+                if (ParameterName == Nomdocu)
+                {
+                        nomDocuOriginal = Parameter;
+                        LogMessage($"Paramètre '{Nomdocu}' trouvé.", System.Drawing.Color.Green);
+                }
+                if (ParameterName == NombrePieces)
+                {
+                    nombrePieces = Parameter;
+                    LogMessage($"Paramètre '{NombrePieces}' trouvé.", System.Drawing.Color.Green);
+                }
+                if (prepaTrouvé && !opOriginalFound)
+                {
+                    bool dérivé = TSHD.Tools.IsDerived(PrepaDocument);
+                        try
+                        {
+                            if (dérivé)
+                            {
+                                List<ElementId> parameters = TSH.Parameters.GetParameters(PrepaDocument);
 
-                        // Si le nom du paramètre est égal au nom attendu, renvoyer l'Element ID
-                        if (ParameterName == Indice_3D)
-                        {
-                            indice3D = Parameter;
-                            LogMessage($"Paramètre '{Indice_3D}' trouvé.", System.Drawing.Color.Green);
-                        }
-                        if (ParameterName == Commentaire)
-                        {
-                            commentaireOriginal = Parameter;
-                            LogMessage($"Paramètre '{Commentaire}' trouvé.", System.Drawing.Color.Green);
-                        }
-                        if (ParameterName == Designation)
-                        {
-                            designationOriginal = Parameter;
-                            LogMessage($"Paramètre '{Designation}' trouvé.", System.Drawing.Color.Green);
-                        }
-                        if (ParameterName == nomElec)
-                        {
-                            nomElecOriginal = Parameter;
-                            LogMessage($"Paramètre '{nomElec}' trouvé.", System.Drawing.Color.Green);
-                        }
-                        if (ParameterName == Nomdocu)
-                        {
-                                nomDocuOriginal = Parameter;
-                                LogMessage($"Paramètre '{Nomdocu}' trouvé.", System.Drawing.Color.Green);
-                        }
-                        if (ParameterName == NombrePieces)
-                        {
-                            nombrePieces = Parameter;
-                            LogMessage($"Paramètre '{NombrePieces}' trouvé.", System.Drawing.Color.Green);
-                        }
-                        if (prepaTrouvé && !opOriginalFound)
-                        {
-                            bool dérivé = TSHD.Tools.IsDerived(PrepaDocument);
-                                try
+                                foreach (ElementId parameter in parameters)
                                 {
-                                    if (dérivé)
+                                    string parameterTxt = TSH.Elements.GetFriendlyName(parameter);
+
+                                    if (parameterTxt == OP)
                                     {
-                                        List<ElementId> parameters = TSH.Parameters.GetParameters(PrepaDocument);
-
-                                        foreach (ElementId parameter in parameters)
-                                        {
-                                            string parameterTxt = TSH.Elements.GetFriendlyName(parameter);
-
-                                            if (parameterTxt == OP)
-                                            {
-                                                OPOriginal = parameter;
-                                                LogMessage($"Paramètre '{OP}' trouvé.", System.Drawing.Color.Green);
-                                                opOriginalFound = true; // Mettre le drapeau à true
-                                                dérivé = false;
-                                                break; // Sortir de la boucle interne
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        foreach (ElementId ParameterPrepaDocument in ParameterPubliéListPrepaDocument)
-                                        {
-                                            string ParameterPrepaDocumentName = TSH.Elements.GetFriendlyName(ParameterPrepaDocument);
-
-                                            if (ParameterPrepaDocumentName == OP)
-                                            {
-                                                OPOriginal = ParameterPrepaDocument;
-                                                LogMessage($"Paramètre '{OP}' trouvé.", System.Drawing.Color.Green);
-                                                opOriginalFound = true; // Mettre le drapeau à true
-                                                break; // Sortir de la boucle interne
-                                            }
-                                        }
+                                        OPOriginal = parameter;
+                                        LogMessage($"Paramètre '{OP}' trouvé.", System.Drawing.Color.Green);
+                                        opOriginalFound = true; // Mettre le drapeau à true
+                                        dérivé = false;
+                                        break; // Sortir de la boucle interne
                                     }
                                 }
-                                catch (Exception ex)
+                            }
+                            else
+                            {
+                                foreach (ElementId ParameterPrepaDocument in ParameterPubliéListPrepaDocument)
                                 {
-                                    LogMessage($"Erreur : lors de la récupération des paramètres OP : {ex.Message}", System.Drawing.Color.Red);
-                                    MessageBox.Show("Erreur : lors de la récupération des paramètres OP " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                    string ParameterPrepaDocumentName = TSH.Elements.GetFriendlyName(ParameterPrepaDocument);
+
+                                    if (ParameterPrepaDocumentName == OP)
+                                    {
+                                        OPOriginal = ParameterPrepaDocument;
+                                        LogMessage($"Paramètre '{OP}' trouvé.", System.Drawing.Color.Green);
+                                        opOriginalFound = true; // Mettre le drapeau à true
+                                        break; // Sortir de la boucle interne
+                                    }
                                 }
+                            }
                         }
-                       
-                    }
+                        catch (Exception ex)
+                        {
+                            LogMessage($"Erreur : lors de la récupération des paramètres OP : {ex.Message}", System.Drawing.Color.Red);
+                            MessageBox.Show("Erreur : lors de la récupération des paramètres OP " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
                 }
-                catch (Exception ex)
-                {
-                    LogMessage($"Erreur : lors de la récupération des paramètres maître : {ex.Message}", System.Drawing.Color.Red);
-                    MessageBox.Show("Erreur : lors de la récupération des paramètres maître " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-            else
-            {
-                LogMessage("Erreur : La liste des paramètres publiés est vide dans le document maître.", System.Drawing.Color.Red);
-                MessageBox.Show("Erreur : La liste des paramètres publiés est vide dans le document maître");
-                indice3D = new ElementId();
-                commentaireOriginal = new ElementId();
-                designationOriginal = new ElementId();
+               
             }
         }
+        catch (Exception ex)
+        {
+            LogMessage($"Erreur : lors de la récupération des paramètres maître : {ex.Message}", System.Drawing.Color.Red);
+            MessageBox.Show("Erreur : lors de la récupération des paramètres maître " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+    else
+    {
+        LogMessage("Erreur : La liste des paramètres publiés est vide dans le document maître.", System.Drawing.Color.Red);
+        MessageBox.Show("Erreur : La liste des paramètres publiés est vide dans le document maître");
+        indice3D = new ElementId();
+        commentaireOriginal = new ElementId();
+        designationOriginal = new ElementId();
+    }
+}
         #endregion
 
         #region Application SmartText (documents sans electrodes)
@@ -1444,7 +1603,7 @@ namespace iFixInvalidity
 
         #region Détection électrode / opérations
         //Verifie si le document est une electrode
-        public bool Iselectrode(DocumentId currentDoc)
+        private bool Iselectrode(DocumentId currentDoc)
         {
             try
             {
@@ -1580,7 +1739,7 @@ namespace iFixInvalidity
 
         #region Extension / Stage
         //Fonction qui recupere extention du document
-        public string Extention(DocumentId currentDoc)
+        private string Extention(DocumentId currentDoc)
         {
             PdmObjectId pdmObjectId = new PdmObjectId();
             string DocumentExt = "";
