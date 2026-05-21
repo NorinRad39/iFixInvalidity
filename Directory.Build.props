@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- Génération du fichier XML de documentation pour tous les projets (SDK-style et non-SDK) -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Emplacement du fichier XML : répertoire de sortie MSBuild (bin\$(Configuration)\) -->
+    <DocumentationFile>$(OutputPath)$(AssemblyName).xml</DocumentationFile>
+  </PropertyGroup>
+</Project>
