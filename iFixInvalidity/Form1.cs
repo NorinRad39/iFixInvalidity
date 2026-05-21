@@ -2631,7 +2631,7 @@ private void ParametreMaster(in DocumentId docMaster, in DocumentId PrepaDocumen
                 ElementId TotalBrutExiste = TSH.Elements.SearchByName(currentDoc.DocId, TotalBrutTxt);
                 ElementId OPExiste = TSH.Elements.SearchByName(currentDoc.DocId, OPIdTxt);
                 ElementId NbrPiecesExiste = TSH.Elements.SearchByName(currentDoc.DocId, NbrPiecesTxt);
-               
+
 
                 // Vérification si le document est une électrode
                 bool iselectrode = Iselectrode(docMaster);
@@ -2648,7 +2648,7 @@ private void ParametreMaster(in DocumentId docMaster, in DocumentId PrepaDocumen
                         TSH.Elements.SetDescription(CommentaireParam, CommentaireTxt);
                         CommentaireCreated = true;
                         LogMessage($"Paramètre '{CommentaireTxt}' créé.", System.Drawing.Color.Green);
-                        SmartText CommentaireSmartTxt = new SmartText( CommentaireParam);
+                        SmartText CommentaireSmartTxt = new SmartText(CommentaireParam);
                         ElementId CommentaireSmartTxtId = TSH.Parameters.PublishText(currentDoc.DocId, CommentaireTxt, CommentaireSmartTxt);
                         TSH.Elements.SetName(CommentaireSmartTxtId, CommentaireTxt);
                         LogMessage($"Paramètre '{CommentaireTxt}' publié.", System.Drawing.Color.Green);
@@ -2668,7 +2668,7 @@ private void ParametreMaster(in DocumentId docMaster, in DocumentId PrepaDocumen
                 {
                     if (currentDoc.DocIsElectrode || iselectrode)
                     {
-                   
+
                         ElementId Nom_docuParam = TSH.Parameters.CreateSmartTextParameter(currentDoc.DocId, new SmartText(""));
                         TSH.Elements.SetName(Nom_docuParam, nom_docuTxt);
                         TSH.Elements.SetDescription(Nom_docuParam, nom_docuTxt);
@@ -2921,54 +2921,72 @@ private void ParametreMaster(in DocumentId docMaster, in DocumentId PrepaDocumen
                 currentDoc.DocId = docId;
                 TopSolidHost.Application.EndModification(true, true);
             }
+        }
 
-            //string numMouleTxt = "Moule";
-            //bool numMouleCreated = false;
-            //ElementId numMouleExiste = TSH.Elements.SearchByName(currentDoc.DocId, numMouleTxt);
-
-
-            //try
-            //{
-            //    if (numMouleExiste == ElementId.Empty)
-            //    {
-            //        // Démarre la modification dans l'application TopSolid
-            //        if (!TopSolidHost.Application.StartModification("My Action", false)) return;
-
-            //        // Assure que le document est marqué comme modifié
-            //        PdmObjectId ProjetPdmId = TSH.Pdm.GetProject(currentDoc.DocPdmObject);
-            //        DocumentId projetDocumentId = TSH.Documents.GetDocument(ProjetPdmId);
-            //        TopSolidHost.Documents.EnsureIsDirty(ref projetDocumentId);
-            //        ElementId nomProjetId = TSH.Parameters.GetNameParameter(projetDocumentId);
-            //        var numMouleParameter = TSH.Parameters.CreateTextRelayedParameter(currentDoc.DocId, nomProjetId, ParameterRelayType.Project);
-
-            //        numMouleCreated = true;
-            //        // Marquer le document comme modifié
-            //        //TopSolidHost.Documents.EnsureIsDirty(ref currentDocID);
-            //        //TopSolidHost.Application.EndModification(true, true);
-            //        LogMessage($"Paramètre '{numMouleTxt}' créé.", System.Drawing.Color.Green);
-            //        TopSolidHost.Documents.EnsureIsDirty(ref currentDocID); // juste avant EndModification
-            //        TopSolidHost.Application.EndModification(true, true);
-            //    }
-            //    else
-            //    {
-            //        LogMessage($"Paramètre '{numMouleTxt}' existe déjà.", System.Drawing.Color.Black);
-            //    }
-            //}
-            //catch (Exception ex)
-            //{
-            //    // Log et affichage d'une erreur en cas d'exception
-            //    LogMessage($"Erreur : {ex.Message}", System.Drawing.Color.Red);
-            //    MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            //    TopSolidHost.Application.EndModification(false, false);
-            //}
+        //string numMouleTxt = "Moule";
+        //bool numMouleCreated = false;
+        //ElementId numMouleExiste = TSH.Elements.SearchByName(currentDoc.DocId, numMouleTxt);
 
 
-                    #endregion
+        //try
+        //{
+        //    if (numMouleExiste == ElementId.Empty)
+        //    {
+        //        // Démarre la modification dans l'application TopSolid
+        //        if (!TopSolidHost.Application.StartModification("My Action", false)) return;
 
-                    }
+        //        // Assure que le document est marqué comme modifié
+        //        PdmObjectId ProjetPdmId = TSH.Pdm.GetProject(currentDoc.DocPdmObject);
+        //        DocumentId projetDocumentId = TSH.Documents.GetDocument(ProjetPdmId);
+        //        TopSolidHost.Documents.EnsureIsDirty(ref projetDocumentId);
+        //        ElementId nomProjetId = TSH.Parameters.GetNameParameter(projetDocumentId);
+        //        var numMouleParameter = TSH.Parameters.CreateTextRelayedParameter(currentDoc.DocId, nomProjetId, ParameterRelayType.Project);
+
+        //        numMouleCreated = true;
+        //        // Marquer le document comme modifié
+        //        //TopSolidHost.Documents.EnsureIsDirty(ref currentDocID);
+        //        //TopSolidHost.Application.EndModification(true, true);
+        //        LogMessage($"Paramètre '{numMouleTxt}' créé.", System.Drawing.Color.Green);
+        //        TopSolidHost.Documents.EnsureIsDirty(ref currentDocID); // juste avant EndModification
+        //        TopSolidHost.Application.EndModification(true, true);
+        //    }
+        //    else
+        //    {
+        //        LogMessage($"Paramètre '{numMouleTxt}' existe déjà.", System.Drawing.Color.Black);
+        //    }
+        //}
+        //catch (Exception ex)
+        //{
+        //    // Log et affichage d'une erreur en cas d'exception
+        //    LogMessage($"Erreur : {ex.Message}", System.Drawing.Color.Red);
+        //    MessageBox.Show("Erreur : " + ex.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        //    TopSolidHost.Application.EndModification(false, false);
+        //}
 
 
+        #endregion
 
 
-                }
-            }
+        #region Menu "docuType"
+        /// <summary>
+        /// Événement déclenché par le clic sur le menu « docuType ».
+        /// Instancie `iFixInvalidity.Build_Document.BibliothequeEnum` et lance
+        /// la vérification/création de la bibliothèque PDM et du document d'énumération
+        /// via la méthode <c>GestionBibliothequeEnum</c>.
+        /// </summary>
+        /// <param name="sender">Objet source de l'événement (contrôle UI).</param>
+        /// <param name="e">Arguments de l'événement.</param>
+        /// <remarks>
+        /// Le traitement est délégué à l'API PDM/TopSolid utilisée dans
+        /// <c>BibliothequeEnum.GestionBibliothequeEnum</c>. Cette opération peut
+        /// lever des exceptions liées à l'API PDM ; envisager d'entourer l'appel
+        /// d'un bloc try/catch si une gestion d'erreurs utilisateur est nécessaire.
+        /// </remarks>
+        private void docuTypeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var bibliothequeEnum = new iFixInvalidity.Build_Document.BibliothequeEnum();
+            bibliothequeEnum.GestionBibliothequeEnum();
+        }
+        #endregion
+    }
+}

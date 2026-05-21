@@ -44,6 +44,7 @@
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.richTextBox1 = new System.Windows.Forms.RichTextBox();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.docuTypeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.groupBox4.SuspendLayout();
@@ -66,7 +67,8 @@
             // 
             this.menuStrip1.BackColor = System.Drawing.SystemColors.Control;
             this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.quitToolStripMenuItem});
+            this.quitToolStripMenuItem,
+            this.docuTypeToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
             this.menuStrip1.Size = new System.Drawing.Size(372, 24);
@@ -202,6 +204,13 @@
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Traitement";
             // 
+            // docuTypeToolStripMenuItem
+            // 
+            this.docuTypeToolStripMenuItem.Name = "docuTypeToolStripMenuItem";
+            this.docuTypeToolStripMenuItem.Size = new System.Drawing.Size(72, 20);
+            this.docuTypeToolStripMenuItem.Text = "DocuType";
+            this.docuTypeToolStripMenuItem.Click += new System.EventHandler(this.docuTypeToolStripMenuItem_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -249,6 +258,7 @@
         private System.Windows.Forms.GroupBox groupBox5;
         private System.Windows.Forms.Button buttonRestart;
         private System.Windows.Forms.RichTextBox richTextBox1;
+        private System.Windows.Forms.ToolStripMenuItem docuTypeToolStripMenuItem;
     }
 }
 

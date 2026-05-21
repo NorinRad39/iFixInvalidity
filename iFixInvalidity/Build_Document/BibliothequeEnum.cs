@@ -26,23 +26,82 @@ using TSHD = TopSolid.Cad.Design.Automating.TopSolidDesignHost;
 
 namespace iFixInvalidity.Build_Document
 {
+    /// <summary>
+    /// Fournit des utilitaires pour vérifier et créer la bibliothèque PDM
+    /// et le document d'énumération utilisé pour la génération de documents.
+    /// </summary>
     internal class BibliothequeEnum
     {
-        public void CheckLib()
+        /// <summary>
+        /// Point d'entrée : s'assure que la bibliothèque PDM nommée <c>docuType</c>
+        /// et le document d'énumération <c>enumDocuType</c> existent.
+        /// Si nécessaire, crée la bibliothèque ou le document puis renomme l'objet PDM.
+        /// </summary>
+        /// <remarks>
+        /// Cette méthode appelle <see cref="CheckLib"/> et <see cref="CheckEnum(ProjetPDM)"/>.
+        /// Elle dépend de l'API PDM exposée via <c>TSH.Pdm</c> (TopSolid).
+        /// </remarks>
+        public void GestionBibliothequeEnum()
         {
-            if (!ProjetPDM.TryGetLibrary("docuType", out var docuType, true))
-            {
-               TSH.Pdm.CreateProject("docuType", true);
-            }
-
-            PdmObjectId docuTypeId = docuType.PdmObjectId;
-            
-
+            var libDocuType = CheckLib();
+            var enumDocId = CheckEnum(libDocuType);
+            TSH.Pdm.SetName(enumDocId, "enumDocuType");
         }
 
+        /// <summary>
+        /// Vérifie l'existence d'une bibliothèque PDM nommée <c>docuType</c>.
+        /// Si la bibliothèque est absente, tente de la créer.
+        /// </summary>
+        /// <returns>
+        /// Le <c>ProjetPDM</c> correspondant à la bibliothèque <c>docuType</c> si trouvé,
+        /// sinon la valeur retournée par l'appel à <c>ProjetPDM.TryGetLibrary</c>.
+        /// </returns>
+        /// <remarks>
+        /// Attention : si <c>ProjetPDM.TryGetLibrary</c> renvoie <c>false</c>, la variable
+        /// locale <c>libDocuType</c> peut rester <c>null</c> même après l'appel à
+        /// <c>TSH.Pdm.CreateProject</c>. Le code appelant doit prendre en compte ce cas
+        /// ou la méthode devrait récupérer explicitement le projet créé.
+        /// </remarks>
+        private ProjetPDM CheckLib()
+        {
+            if (!ProjetPDM.TryGetLibrary("docuType", out var libDocuType, true))
+            {
+                TSH.Pdm.CreateProject("docuType", true);
+            }
+            
+            return libDocuType;
+        }
 
-
-
-
+        /// <summary>
+        /// Recherche dans la bibliothèque fournie un document nommé <c>enumDocuType</c>.
+        /// Si aucun document correspondant n'est trouvé, crée un nouveau document de type <c>TopEnu</c>.
+        /// </summary>
+        /// <param name="libDocuType">La bibliothèque PDM à inspecter. Peut être <c>null</c>.</param>
+        /// <returns>
+        /// L'identifiant PDM (<c>PdmObjectId</c>) du document existant ou nouvellement créé.
+        /// </returns>
+        /// <remarks>
+        /// Si <paramref name="libDocuType"/> est <c>null</c>, l'appel à
+        /// <c>TSH.Pdm.CreateDocument(libDocuType.PdmObjectId, ...)</c> provoquera une exception.
+        /// Il est recommandé de valider que la bibliothèque est non nulle avant l'appel,
+        /// ou de modifier <see cref="CheckLib"/> pour retourner systématiquement le projet créé.
+        /// </remarks>
+        private PdmObjectId CheckEnum(ProjetPDM libDocuType)
+        {
+            
+            if (libDocuType != null)
+            {
+                foreach (var doc in libDocuType.Documents)
+                { 
+                   string docName = TSH.Pdm.GetName(doc);
+                    if (docName == "enumDocuType")
+                    {
+                        return doc;
+                    }
+                }   
+            }
+            var enumDocId = TSH.Pdm.CreateDocument(libDocuType.PdmObjectId, ".TopEnu", false);
+            return enumDocId;
+        }       
     } 
 }

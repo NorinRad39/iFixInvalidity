@@ -199,6 +199,23 @@ foreach ($p in $projects) {
 				if (-not (Test-Path $stageDir)) { New-Item -ItemType Directory -Path $stageDir | Out-Null }
 				Copy-Item -Path $dll -Destination $stageDir -Force
 				Write-Host "[Staging] DLL copiée depuis $dll vers $stageDir"
+
+				# Cherche le XML (le csproj le génère dans bin\<Configuration>\ et non avec la DLL)
+				$xmlCandidates = @(
+					[System.IO.Path]::ChangeExtension($dll, '.xml'),
+					(Join-Path $ProjectDir "bin\$Configuration\OutilsTs.xml"),
+					(Join-Path $ProjectDir "bin\x64\$Configuration\OutilsTs.xml")
+				)
+				$xml = $xmlCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+				if ($xml) {
+					$destXml = Join-Path $stageDir 'OutilsTs.xml'
+					Copy-Item -Path $xml -Destination $destXml -Force
+					Write-Host "[Staging] XML copié : $destXml"
+				} else {
+					Write-Warning "[Staging] XML introuvable dans les chemins suivants :"
+					$xmlCandidates | ForEach-Object { Write-Warning "  $_" }
+					Write-Warning "Les descriptions de méthodes seront absentes de la doc."
+				}
 				return $true
 			}
 			elseif ($ProjectName -eq 'iFixInvalidity') {
@@ -240,8 +257,19 @@ foreach ($p in $projects) {
 		}
 		Ensure-MSBuild
 
-		Write-Host "Génération des métadonnées..."
-		& "$script:DocfxPath" metadata $p.Config
+		# ── Nettoyage du cache DocFX uniquement (pas le dossier api entier) ──
+        $cacheDir = Join-Path $p.Path 'docfx_stage\obj'
+        $apiYmls  = Join-Path $p.Path 'api\*.yml'
+        if (Test-Path $cacheDir) {
+            Remove-Item $cacheDir -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Host "[Cache] Supprimé : $cacheDir"
+        }
+        # Supprimer uniquement les YAML générés (pas index.md)
+        Get-Item $apiYmls -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        Write-Host "[Cache] YAML api/ nettoyés"
+
+        Write-Host "Génération des métadonnées..."
+        & "$script:DocfxPath" metadata $p.Config
 		if ($LASTEXITCODE -ne 0) { throw "docfx metadata a échoué pour $($p.Name)" }
 
 		Write-Host "Génération du site..."

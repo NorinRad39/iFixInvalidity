@@ -1,13 +1,19 @@
 $dest = (Resolve-Path '..\Classe-outils-topsolid\Classe outils topsolid').Path
 $destFile = Join-Path $dest 'docfx.json'
 
-# Copier OutilsTs.dll seul (sans XML) dans un sous-dossier dédié pour docfx
+# Copier OutilsTs.dll ET le XML de documentation dans docfx_stage
 $dllSrc = Join-Path $dest 'bin\x64\Release\net481\OutilsTs.dll'
+$xmlSrc = Join-Path $dest 'bin\x64\Release\net481\OutilsTs.xml'
 $dllStageDir = Join-Path $dest 'docfx_stage'
 if (Test-Path $dllStageDir) { Remove-Item $dllStageDir -Recurse -Force }
 New-Item -ItemType Directory -Path $dllStageDir | Out-Null
 Copy-Item $dllSrc $dllStageDir
-Write-Host "DLL copiée dans : $dllStageDir (sans XML)"
+if (Test-Path $xmlSrc) {
+    Copy-Item $xmlSrc $dllStageDir
+    Write-Host "DLL + XML copiés dans : $dllStageDir"
+} else {
+    Write-Warning "Fichier XML introuvable : $xmlSrc — les descriptions n'apparaîtront pas dans la doc"
+}
 
 $json = @'
 {
