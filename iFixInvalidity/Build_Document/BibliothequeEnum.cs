@@ -66,9 +66,14 @@ namespace iFixInvalidity.Build_Document
         {
             if (!ProjetPDM.TryGetLibrary("docuType", out var libDocuType, true))
             {
+                // Tentative de création si la bibliothèque n'existe pas
                 TSH.Pdm.CreateProject("docuType", true);
+
+                // Réessayer de récupérer le projet créé afin de retourner
+                // un Objet ProjetPDM non-null si la création a réussi.
+                ProjetPDM.TryGetLibrary("docuType", out libDocuType, true);
             }
-            
+
             return libDocuType;
         }
 
@@ -88,18 +93,24 @@ namespace iFixInvalidity.Build_Document
         /// </remarks>
         private PdmObjectId CheckEnum(ProjetPDM libDocuType)
         {
-            
-            if (libDocuType != null)
+            // Certains API TopSolid peuvent renvoyer un objet ProjetPDM non-null mais
+            // contenant un PdmObjectId vide. On vérifie donc à la fois la nullité
+            // et l'état Empty de l'identifiant PDM.
+            if (libDocuType == null || libDocuType.PdmObjectId.IsEmpty)
             {
-                foreach (var doc in libDocuType.Documents)
-                { 
-                   string docName = TSH.Pdm.GetName(doc);
-                    if (docName == "enumDocuType")
-                    {
-                        return doc;
-                    }
-                }   
+                throw new InvalidOperationException("La bibliothèque PDM 'docuType' est introuvable ou invalide : impossible de créer ou retrouver 'enumDocuType'.");
             }
+
+            foreach (var doc in libDocuType.Documents)
+            {
+                string docName = TSH.Pdm.GetName(doc);
+                if (docName == "enumDocuType")
+                {
+                    return doc;
+                }
+            }
+
+            // Aucun document trouvé : création d'un nouveau document d'énumération
             var enumDocId = TSH.Pdm.CreateDocument(libDocuType.PdmObjectId, ".TopEnu", false);
             return enumDocId;
         }       

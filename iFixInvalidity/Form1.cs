@@ -45,17 +45,26 @@ namespace iFixInvalidity
         #endregion
 
         #region Constructeur
-        public Form1()
-        {
-            InitializeComponent();
+        /// <summary>
+/// Initialise une nouvelle instance de la fenêtre principale <see cref="Form1"/>.
+/// </summary>
+/// <remarks>
+/// - Appelle <see cref="InitializeComponent"/> pour construire l'interface WinForms.
+/// - S'abonne à <see cref="Form.Shown"/> (gestionnaire <c>Form1_Shown</c>) pour démarrer la connexion à TopSolid après que la fenêtre soit affichée,
+///   évitant ainsi les opérations longues pendant le rendu initial.
+/// - S'abonne à <see cref="Form.FormClosing"/> (gestionnaire <c>Form1_FormClosing</c>) pour effectuer une déconnexion propre des hôtes TopSolid lors de la fermeture.
+/// Ces abonnements garantissent que la connexion est établie après l'affichage et que la déconnexion est tentée avant la fermeture de l'application.
+/// </remarks>
+public Form1()
+{
+    InitializeComponent();
 
-            // Abonnement à l'événement Shown pour lancer la connexion APRES l'affichage de la fenêtre
-            this.Shown += Form1_Shown;
+    // Abonnement à l'événement Shown pour lancer la connexion APRES l'affichage de la fenêtre
+    this.Shown += Form1_Shown;
 
-            // AJOUT : Abonnement à l'événement de fermeture pour gérer la déconnexion
-            this.FormClosing += Form1_FormClosing;
-        }
-
+    // AJOUT : Abonnement à l'événement de fermeture pour gérer la déconnexion
+    this.FormClosing += Form1_FormClosing;
+}
         // AJOUT : Méthode pour gérer la déconnexion propre
 
         /// <summary>
