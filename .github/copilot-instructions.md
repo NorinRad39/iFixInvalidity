@@ -79,3 +79,4 @@ cd C:\...\iFixInvalidity
 # Dans MSBuild (ligne de commande)
 msbuild iFixInvalidity.sln /p:GenerateDocFXEnabled=false
 ```
+

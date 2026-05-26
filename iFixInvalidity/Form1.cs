@@ -2993,8 +2993,7 @@ private void ParametreMaster(in DocumentId docMaster, in DocumentId PrepaDocumen
         /// </remarks>
         private void docuTypeToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var bibliothequeEnum = new iFixInvalidity.Build_Document.BibliothequeEnum();
-            bibliothequeEnum.GestionBibliothequeEnum();
+            iFixInvalidity.Build_Document.MainDocBuild.GestionBibliothequeEnum();
         }
         #endregion
     }
