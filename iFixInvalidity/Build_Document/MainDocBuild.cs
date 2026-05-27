@@ -51,12 +51,12 @@ namespace iFixInvalidity.Build_Document
             //Gestion de creation de la librairie docuType avec mise au coffre et validation du cycle de vie
             var libDocuType = BibliothequeEnum.CheckLib();
             //Mise au coffre
-            TopSolidHost.Pdm.CheckIn(libDocuType, false);
+            TSH.Pdm.CheckIn(libDocuType, false);
             //Validation cycle de vie
-            TopSolidHost.Pdm.SetLifeCycleMainState(libDocuType, PdmLifeCycleMainState.Validated);
+            TSH.Pdm.SetLifeCycleMainState(libDocuType, PdmLifeCycleMainState.Validated);
             #endregion
 
-            #region gestion document enumDocuType
+            #region gestion document d'enumeration des type de document enumDocuType
             //Gestion de creation du document enumDocuType avec mise au coffre et validation du cycle de vie
             var enumDocId = BibliothequeEnum.CheckEnum(libDocuType);
             //On renomme le document créé en enumDocuType
@@ -64,9 +64,11 @@ namespace iFixInvalidity.Build_Document
             //insértion des différents types de documents
             BibliothequeEnum.EditEnumDocument(enumDocId.DocId);
             //Mise au coffre
-            TopSolidHost.Pdm.CheckIn(enumDocId.DocPdmObject, false);
+            TSH.Pdm.CheckIn(enumDocId.DocPdmObject, false);
             //Validation cycle de vie
-            TopSolidHost.Pdm.SetLifeCycleMainState(enumDocId.DocPdmObject, PdmLifeCycleMainState.Validated);
+            TSH.Pdm.SetLifeCycleMainState(enumDocId.DocPdmObject, PdmLifeCycleMainState.Validated);
+
+            PDM.RefLibrary(PDM.GetCurrentProjectPdmObject(), libDocuType);
             #endregion
         }
     }
