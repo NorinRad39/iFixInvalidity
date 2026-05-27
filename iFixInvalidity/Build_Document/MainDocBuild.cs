@@ -69,6 +69,12 @@ namespace iFixInvalidity.Build_Document
             TSH.Pdm.SetLifeCycleMainState(enumDocId.DocPdmObject, PdmLifeCycleMainState.Validated);
 
             PDM.RefLibrary(PDM.GetCurrentProjectPdmObject(), libDocuType);
+            
+            DocBuild.CreateEnumParam(enumDocId.DocId);
+
+            var (intValue, textValue) = BibliothequeEnum.AfficherEnumValues();
+
+
             #endregion
         }
     }

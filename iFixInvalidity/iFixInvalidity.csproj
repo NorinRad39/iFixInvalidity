@@ -88,6 +88,9 @@
   <ItemGroup>
     <Compile Include="Build_Document\BibliothequeEnum.cs" />
     <Compile Include="Build_Document\DocBuild.cs" />
+    <Compile Include="Build_Document\FormEnumValues.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Build_Document\MainDocBuild.cs" />
     <Compile Include="Electrode.cs" />
     <Compile Include="Form1.cs">

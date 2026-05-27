@@ -2994,6 +2994,7 @@ private void ParametreMaster(in DocumentId docMaster, in DocumentId PrepaDocumen
         private void docuTypeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             iFixInvalidity.Build_Document.MainDocBuild.GestionBibliothequeEnum();
+           
         }
         #endregion
     }

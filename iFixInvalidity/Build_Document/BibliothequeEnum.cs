@@ -33,6 +33,19 @@ namespace iFixInvalidity.Build_Document
     internal static class BibliothequeEnum
     {
         /// <summary>
+        /// Libellés de l'énumération <c>enumDocuType</c> — source unique partagée.
+        /// </summary>
+        internal static readonly string DocuTypeStr =
+            "Liste outils, Electrode, Ensemble électrodes, Prépa électrode, Prépa pièces, " +
+            "Usinage électrode, Usinage pièce, Brut électrode, Electrode parallélisée, Air projetée électrode";
+
+        /// <summary>
+        /// Retourne la liste des libellés de l'énumération <c>enumDocuType</c>.
+        /// </summary>
+        internal static List<string> GetEnumTextValues()
+            => DocuTypeStr.Split(',').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)).ToList();
+
+        /// <summary>
         /// Vérifie l'existence d'une bibliothèque PDM nommée <c>docuType</c> parmi toutes les
         /// bibliothèques disponibles dans le PDM.
         /// <list type="bullet">
@@ -68,6 +81,7 @@ namespace iFixInvalidity.Build_Document
         /// </remarks>
         internal static PdmObjectId CheckLib()
         {
+            string libName = "00 - DocuType";
             // Étape 1 : Récupérer toutes les bibliothèques disponibles dans le PDM
             var alLib = PDM.GetLibraries();
 
@@ -81,7 +95,7 @@ namespace iFixInvalidity.Build_Document
                 foreach (var lib in alLib)
                 {
                     // Étape 4 : Comparer le nom de la bibliothèque avec 'docuType'
-                    if (TSH.Pdm.GetName(lib) == "docuType")
+                    if (TSH.Pdm.GetName(lib) == libName)
                     {
                         // Étape 5 : Vérifier que la bibliothèque n'est pas dans la corbeille
                         if (!PDM.IsInRecycleBin(lib))
@@ -103,16 +117,16 @@ namespace iFixInvalidity.Build_Document
                 if (!docuTypeExiste)
                 {
                     // Création de la bibliothèque 'docuType' dans le PDM
-                    var libDocuType = TSH.Pdm.CreateProject("docuType", true);
-                    MessageBox.Show("La bibliothèque PDM 'docuType' a été créée avec succès.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    var libDocuType = TSH.Pdm.CreateProject(libName, true);
+                    MessageBox.Show($"La bibliothèque PDM '{libName}' a été créée avec succès.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return libDocuType;
                 }
             }
             else
             {
                 // Étape 7 : La liste est vide ou nulle — aucune bibliothèque dans le PDM, on crée 'docuType'
-                var libDocuType = TSH.Pdm.CreateProject("docuType", true);
-                MessageBox.Show("La bibliothèque PDM 'docuType' a été créée avec succès.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                var libDocuType = TSH.Pdm.CreateProject(libName, true);
+                MessageBox.Show($"La bibliothèque PDM '{libName}' a été créée avec succès.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return libDocuType;
             }
 
@@ -137,6 +151,8 @@ namespace iFixInvalidity.Build_Document
         /// </exception>
         internal static Document CheckEnum(PdmObjectId libDocuType)
         {
+            string docuName = "enumDocuType";
+
             Document enumDocument;
 
             // Étape 1 : Valider que l'identifiant de bibliothèque fourni n'est pas vide
@@ -147,7 +163,7 @@ namespace iFixInvalidity.Build_Document
             foreach (var doc in PDM.GetAllProjectDocuments(libDocuType))
             {
                 // Étape 3 : Comparer le nom du document avec 'enumDocuType'
-                if (TSH.Pdm.GetName(doc) == "enumDocuType")
+                if (TSH.Pdm.GetName(doc) == docuName)
                 {
                     // Document trouvé : on le retourne encapsulé dans un objet Document
                     return enumDocument = new Document(TSH.Documents.GetDocument(doc));
@@ -155,7 +171,7 @@ namespace iFixInvalidity.Build_Document
             }
 
             // Étape 4 : Aucun document 'enumDocuType' trouvé — on le crée avec l'extension .TopEnu
-            var enumDocumentPdmId = TSH.Pdm.CreateDocument(libDocuType, ".TopEnu", false);
+            var enumDocumentPdmId = TSH.Pdm.CreateDocument(libDocuType, ".TopPrd", false);
 
             // Étape 5 : Retourner le document nouvellement créé encapsulé dans un objet Document
             return enumDocument = new Document(TSH.Documents.GetDocument(enumDocumentPdmId));
@@ -202,7 +218,6 @@ namespace iFixInvalidity.Build_Document
                 throw new InvalidOperationException("Le document d'énumération 'enumDocuType' doit être fourni pour être édité.");
 
             // Étape 2 : Démarrer une transaction de modification TopSolid
-            // Si la transaction ne peut pas démarrer, on abandonne immédiatement
             if (!TSH.Application.StartModification("Ajout valeurs Enum", false)) return;
 
             try
@@ -210,11 +225,12 @@ namespace iFixInvalidity.Build_Document
                 // Étape 3 : Marquer le document comme modifié (dirty) pour forcer la sauvegarde
                 TSH.Documents.EnsureIsDirty(ref enumDocument);
 
-                // Étape 4 : Préparer la liste des valeurs entières de l'énumération
-                List<int> intValues = "1,2,3".Split(',').Select(int.Parse).ToList();
+                // Étape 4 : Préparer la liste des libellés depuis la source unique
+                List<string> text = BibliothequeEnum.GetEnumTextValues();
+                int textCount = text.Count;
 
-                // Étape 5 : Préparer la liste des libellés textuels correspondants
-                List<string> text = "TypeA,TypeB,TypeC".Split(',').ToList();
+                // Étape 5 : Préparer la liste des valeurs entières (0 à textCount-1)
+                List<int> intValues = Enumerable.Range(0, textCount).ToList();
 
                 // Étape 6 : Injecter les couples (valeur / libellé) dans le document d'énumération
                 TSH.Parameters.SetUserEnumerationValues(enumDocument, intValues, text);
@@ -227,7 +243,40 @@ namespace iFixInvalidity.Build_Document
                 // Étape 8 (erreur) : Annuler la transaction pour ne pas corrompre le document
                 TopSolidHost.Application.EndModification(false, false);
             }
+        }
 
+        /// <summary>
+        /// Récupère les valeurs de l'énumération utilisateur depuis le document <c>enumDocuType</c>.
+        /// </summary>
+        /// <param name="enumDocument">Identifiant du document d'énumération TopSolid.</param>
+        /// <param name="intValues">Liste des identifiants entiers PDM de chaque valeur.</param>
+        /// <param name="textValues">Liste des libellés textuels correspondants.</param>
+        internal static void GetEnumValuesFromDocument(DocumentId enumDocument, out List<int> intValues, out List<string> textValues)
+        {
+            if (enumDocument.IsEmpty)
+                throw new InvalidOperationException("Le document d'énumération 'enumDocuType' doit être fourni pour extraire les valeurs.");
+
+            intValues = null;
+            textValues = null;
+            TSH.Parameters.GetUserEnumerationValues(enumDocument, out intValues, out textValues);
+        }
+
+        /// <summary>
+        /// Ouvre la fenêtre permettant à l'utilisateur de sélectionner une valeur
+        /// dans l'énumération <c>enumDocuType</c>.
+        /// </summary>
+        /// <returns>
+        /// Un tuple contenant l'identifiant entier PDM (<c>intValue</c>) et le libellé textuel
+        /// (<c>textValue</c>) de la valeur sélectionnée, ou <c>(-1, "")</c> si l'utilisateur annule.
+        /// </returns>
+        internal static (int intValue, string textValue) AfficherEnumValues()
+        {
+            using (var form = new FormEnumValues())
+            {
+                if (form.ShowDialog() == DialogResult.OK)
+                    return (form.SelectedIntValue, form.SelectedTextValue);
+            }
+            return (-1, string.Empty);
         }
     }
 }
