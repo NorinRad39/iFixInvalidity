@@ -45,15 +45,16 @@ namespace iFixInvalidity
                 // Étape 3 : Marquer le document comme modifié (dirty) pour forcer la sauvegarde
                 TSH.Documents.EnsureIsDirty(ref docId);
                 var elementId = TSH.Parameters.CreateUserPropertyParameter(docId, enumDocId);
+                TSH.Parameters.SetIntegerValue(elementId, 0);
 
                 // Étape 7 : Valider et clôturer la transaction avec succès
-                TopSolidHost.Application.EndModification(true, true);
+                TSH.Application.EndModification(true, true);
                 return elementId;
             }
             catch (Exception ex)
             {
                 // Étape 8 (erreur) : Annuler la transaction pour ne pas corrompre le document
-                TopSolidHost.Application.EndModification(false, false);
+                TSH.Application.EndModification(false, false);
                 throw;
             }
         }

@@ -171,7 +171,7 @@ namespace iFixInvalidity.Build_Document
             }
 
             // Étape 4 : Aucun document 'enumDocuType' trouvé — on le crée avec l'extension .TopEnu
-            var enumDocumentPdmId = TSH.Pdm.CreateDocument(libDocuType, ".TopPrd", false);
+            var enumDocumentPdmId = TSH.Pdm.CreateDocument(libDocuType, ".TopEnu", false);
 
             // Étape 5 : Retourner le document nouvellement créé encapsulé dans un objet Document
             return enumDocument = new Document(TSH.Documents.GetDocument(enumDocumentPdmId));
@@ -244,6 +244,83 @@ namespace iFixInvalidity.Build_Document
                 TopSolidHost.Application.EndModification(false, false);
             }
         }
+
+        /// <summary>
+        /// Vérifie l'existence du document de propriétés utilisateur (<c>UserPropertyDocuType</c>) dans la bibliothèque PDM spécifiée.
+        /// Si le document est trouvé, il est retourné encapsulé dans un objet <see cref="Document"/>.
+        /// Dans le cas contraire, un nouveau document avec l'extension <c>.TopPrd</c> est créé dans la bibliothèque, puis retourné.
+        /// </summary>
+        /// <param name="libDocuType">
+        /// Identifiant PDM (<see cref="PdmObjectId"/>) de la bibliothèque dans laquelle rechercher ou créer le document.
+        /// Ne doit pas être vide ; une <see cref="InvalidOperationException"/> est levée dans le cas contraire.
+        /// </param>
+        /// <returns>
+        /// Un objet <see cref="Document"/> encapsulant le document PDM <c>UserPropertyDocuType</c> existant ou nouvellement créé.
+        /// </returns>
+        /// <exception cref="InvalidOperationException">
+        /// Levée lorsque <paramref name="libDocuType"/> est vide (<see cref="PdmObjectId.IsEmpty"/> est <c>true</c>).
+        /// </exception>
+        internal static Document CheckUserPropertyDocument(PdmObjectId libDocuType)
+        {
+            string docuName = "UserPropertyDocuType";
+
+            Document userProperty;
+
+            // Étape 1 : Valider que l'identifiant de bibliothèque fourni n'est pas vide
+            if (libDocuType.IsEmpty)
+                throw new InvalidOperationException("La bibliothèque PDM 'DocuType' doit être fournie pour vérifier ou créer le document d'énumération.");
+
+            // Étape 2 : Parcourir tous les documents de la bibliothèque pour chercher 'UserPropertyDocuType'
+            foreach (var doc in PDM.GetAllProjectDocuments(libDocuType))
+            {
+                // Étape 3 : Comparer le nom du document avec 'UserPropertyDocuType'
+                if (TSH.Pdm.GetName(doc) == docuName)
+                {
+                    // Document trouvé : on le retourne encapsulé dans un objet Document
+                    return userProperty = new Document(TSH.Documents.GetDocument(doc));
+                }
+            }
+
+            // Étape 4 : Aucun document 'UserPropertyDocuType' trouvé — on le crée avec l'extension .TopPrd
+            var userPropertyPdmId = TSH.Pdm.CreateDocument(libDocuType, ".TopPrd", false);
+
+            // Étape 5 : Retourner le document nouvellement créé encapsulé dans un objet Document
+            return userProperty = new Document(TSH.Documents.GetDocument(userPropertyPdmId));
+        }
+
+        //internal static void EditUserPropertyDocument(DocumentId userProperty)
+        //{
+        //    // Étape 1 : Valider que l'identifiant du document fourni n'est pas vide
+        //    if (userProperty.IsEmpty)
+        //        throw new InvalidOperationException("Le document d'énumération 'UserPropertyDocuType' doit être fourni pour être édité.");
+
+        //    // Étape 2 : Démarrer une transaction de modification TopSolid
+        //    if (!TSH.Application.StartModification("Ajout valeurs Enum", false)) return;
+
+        //    try
+        //    {
+        //        // Étape 3 : Marquer le document comme modifié (dirty) pour forcer la sauvegarde
+        //        TSH.Documents.EnsureIsDirty(ref userProperty);
+
+        //        // Étape 4 : Préparer la liste des libellés depuis la source unique
+        //        List<string> text = BibliothequeEnum.GetEnumTextValues();
+        //        int textCount = text.Count;
+
+        //        // Étape 5 : Préparer la liste des valeurs entières (0 à textCount-1)
+        //        List<int> intValues = Enumerable.Range(0, textCount).ToList();
+
+        //        // Étape 6 : Injecter les couples (valeur / libellé) dans le document d'énumération
+        //        TSH.Parameters.SetUser(enumDocument, intValues, text);
+
+        //        // Étape 7 : Valider et clôturer la transaction avec succès
+        //        TopSolidHost.Application.EndModification(true, true);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Étape 8 (erreur) : Annuler la transaction pour ne pas corrompre le document
+        //        TopSolidHost.Application.EndModification(false, false);
+        //    }
+        //}
 
         /// <summary>
         /// Récupère les valeurs de l'énumération utilisateur depuis le document <c>enumDocuType</c>.

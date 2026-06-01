@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using TopSolid.Kernel.Automating;
 using TSH = TopSolid.Kernel.Automating.TopSolidHost;
@@ -92,47 +93,14 @@ namespace iFixInvalidity.Build_Document
 
         private void ChargerValeurs()
         {
-            try
-            {
-                DocumentId enumDocId = TrouverEnumDocuType();
-                if (enumDocId.IsEmpty)
-                {
-                    MessageBox.Show("Le document 'enumDocuType' est introuvable dans le PDM.",
-                        "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
+            _textValues = BibliothequeEnum.GetEnumTextValues();
+            _intValues = Enumerable.Range(0, _textValues.Count).ToList();
 
-                BibliothequeEnum.GetEnumValuesFromDocument(enumDocId, out _intValues, out _textValues);
+            foreach (var t in _textValues)
+                _comboBox.Items.Add(t);
 
-                if (_textValues != null)
-                    foreach (var t in _textValues)
-                        _comboBox.Items.Add(t);
-
-                if (_comboBox.Items.Count > 0)
-                    _comboBox.SelectedIndex = 0;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Erreur lors du chargement des valeurs : {ex.Message}",
-                    "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        /// <summary>
-        /// Recherche le <see cref="DocumentId"/> du fichier <c>enumDocuType</c>
-        /// dans la bibliothèque <c>docuType</c> du PDM.
-        /// </summary>
-        private DocumentId TrouverEnumDocuType()
-        {
-            PdmObjectId libDocuType = BibliothequeEnum.CheckLib();
-            if (libDocuType.IsEmpty) return DocumentId.Empty;
-
-            foreach (var doc in PDM.GetAllProjectDocuments(libDocuType))
-            {
-                if (TSH.Pdm.GetName(doc) == "enumDocuType")
-                    return TSH.Documents.GetDocument(doc);
-            }
-            return DocumentId.Empty;
+            if (_comboBox.Items.Count > 0)
+                _comboBox.SelectedIndex = 0;
         }
 
         private void BtnOK_Click(object sender, EventArgs e)
