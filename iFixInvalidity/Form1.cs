@@ -508,7 +508,7 @@ private DocumentId DocumentCourant()
         string OP = "OP";                  // Paramètre pour l'opération
         string nomElec = "Nom elec";       // Paramètre pour le nom de l'électrode
         string Nomdocu = "Nom_docu";      // Paramètre pour le nom du document
-        string NombrePieces = "Nombre de piéces"; // Paramètre pour le nombre de pièces
+        string NombrePieces = "Nombre de pieces"; // Paramètre pour le nombre de pièces
 
         #endregion
 
