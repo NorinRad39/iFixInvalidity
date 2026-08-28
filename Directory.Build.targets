@@ -1,9 +1,20 @@
-<!--
+﻿<!--
   Ce fichier est automatiquement importé par MSBuild pour tous les projets du répertoire.
   Il déclenche la génération de la documentation DocFX après chaque build réussi,
   sans jamais bloquer ni faire échouer le build principal.
 -->
 <Project>
+
+  <!--
+    Emplacement du fichier XML de documentation : repertoire de sortie MSBuild, soit
+    bin\$(Configuration)\. Defini ici et non dans Directory.Build.props, ou $(OutputPath) et
+    $(AssemblyName) sont encore vides.
+    La condition laisse la main a un projet qui fixerait son propre chemin.
+  -->
+  <PropertyGroup Condition="'$(DocumentationFile)' == ''">
+    <DocumentationFile>$(OutputPath)$(AssemblyName).xml</DocumentationFile>
+  </PropertyGroup>
+
 
   <Target Name="GenerateDocFX"
 		  AfterTargets="Build"
