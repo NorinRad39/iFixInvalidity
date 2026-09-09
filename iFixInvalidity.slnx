@@ -2,5 +2,5 @@
   <Project Path="../Classe-outils-topsolid/Classe outils topsolid/OutilsTs.csproj">
     <Platform Project="x64" />
   </Project>
-  <Project Path="iFixInvalidity/iFixInvalidity.csproj" />
+  <Project Path="iFixInvalidity/iFixInvalidity.csproj" Id="50fedbb5-3f3c-4bb1-85b2-2500e7ad49a0" />
 </Solution>

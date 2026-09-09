@@ -66,7 +66,7 @@
 #define SourceDir "..\iFixInvalidity\bin\Release"
 
 ; Icone du programme d'installation.
-#define IconFile "..\iFixInvalidity\un logo de recyclage stylisé qui passe du rouge au vert, avec un engrenage au milieu, sans aucun lien avec lecole (2).ico"
+#define IconFile "..\iFixInvalidity\Ressource\icon.ico"
 
 
 ; --- Options (laissez la ligne en commentaire si la fonction ne sert pas) ------
