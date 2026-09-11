@@ -34,7 +34,7 @@ namespace iFixInvalidity
 
             // Étape 1 : Valider que l'identifiant du document fourni n'est pas vide
             if (docId.IsEmpty)
-                throw new InvalidOperationException("Le document actuel est vide.");
+                throw new InvalidOperationException("Aucun document en cours d'édition.");
 
             // Étape 2 : Démarrer une transaction de modification TopSolid
             if (!TSH.Application.StartModification("Ajout parametre enum dans document courant", false)) 
