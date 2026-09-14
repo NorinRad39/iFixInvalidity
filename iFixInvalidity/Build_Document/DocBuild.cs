@@ -28,7 +28,7 @@ namespace iFixInvalidity
 {
     internal class DocBuild
     {
-        public static ElementId CreateEnumParam(DocumentId enumDocId)
+        public static ElementId CreateEnumParam(DocumentId currentDoc ,DocumentId enumDocId)
         {
             DocumentId docId = TSH.Documents.EditedDocument;
 
@@ -44,7 +44,8 @@ namespace iFixInvalidity
             {
                 // Étape 3 : Marquer le document comme modifié (dirty) pour forcer la sauvegarde
                 TSH.Documents.EnsureIsDirty(ref docId);
-                var elementId = TSH.Parameters.CreateUserPropertyParameter(docId, enumDocId);
+
+                var elementId = TSH.Parameters.CreateUserEnumParameter(docId, enumDocId);
                 TSH.Parameters.SetIntegerValue(elementId, 0);
 
                 // Étape 7 : Valider et clôturer la transaction avec succès
