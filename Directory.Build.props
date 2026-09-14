@@ -1,8 +1,13 @@
-<Project>
+﻿<Project>
   <PropertyGroup>
     <!-- Génération du fichier XML de documentation pour tous les projets (SDK-style et non-SDK) -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <!-- Emplacement du fichier XML : répertoire de sortie MSBuild (bin\$(Configuration)\) -->
-    <DocumentationFile>$(OutputPath)$(AssemblyName).xml</DocumentationFile>
+    <!--
+      DocumentationFile n'est PAS defini ici : ce fichier est importe tout en haut du projet,
+      avant que AssemblyName et OutputPath n'existent. La valeur y devenait donc ".xml" tout
+      court — un fichier sans nom cree a la racine du projet a chaque build, et aucun XML de
+      documentation dans bin\Release. Le chemin est fixe dans Directory.Build.targets, qui est
+      importe a la fin, quand tout est defini.
+    -->
   </PropertyGroup>
 </Project>

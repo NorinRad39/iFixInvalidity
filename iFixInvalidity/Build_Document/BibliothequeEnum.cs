@@ -36,8 +36,7 @@ namespace iFixInvalidity.Build_Document
         /// Libellés de l'énumération <c>enumDocuType</c> — source unique partagée.
         /// </summary>
         internal static readonly string DocuTypeStr =
-            "Liste outils, Electrode, Ensemble électrodes, Prépa électrode, Prépa pièces, " +
-            "Usinage électrode, Usinage pièce, Brut électrode, Electrode parallélisée, Air projetée électrode";
+            "Assemblage,Piéce,Electrode,Ensemble élec,Brut électrode,Electrode parallélisée,Air projetée électrode,Prépa élec,Prépa pièces,Usinage électrode,Usinage pièce,Liste outils élec,Liste outils piéces";
 
         /// <summary>
         /// Retourne la liste des libellés de l'énumération <c>enumDocuType</c>.
