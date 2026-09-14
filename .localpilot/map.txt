@@ -1,0 +1,89 @@
+## WORKSPACE EXECUTIVE SUMMARY (YAML)
+# Generated: 2026-09-14T21:01:04.9785610+02:00
+# Root: D:\Code\source\repos\NorinRad39\iFixInvalidity
+Architecture:
+  Type: Backend (C#/.NET)
+  Scale: 39 relevant source files
+  Components: 0
+  Controllers: 0
+  Models: 0
+  Services: 0
+---
+- File: iFixInvalidity\iFixInvalidity.csproj
+  Preview: "<?xml version='1.0' encoding='utf-8'?> <Project ToolsVersion='15.0' xmlns='http://schemas.microsoft.com/developer/msbuild/2003'>  <Import Project='$(M..."
+- File: docfx.json
+  Preview: "{  'metadata': [   {    'src': [     { 'files': [ 'docfx_stage_ifix/iFixInvalidity.exe' ] }    ],    'dest': 'api',    'disableGitFeatures': true   } ..."
+- File: generate-docs.ps1
+  Preview: "<# Script PowerShell pour générer la documentation DocFX pour les deux projets : - Classe-outils-topsolid (../Classe-outils-topsolid/Classe outils top..."
+- File: iFixInvalidity.slnx
+  Preview: "<Solution>  <Project Path='../Classe-outils-topsolid/Classe outils topsolid/OutilsTs.csproj'>   <Platform Project='x64' />  </Project>  <Project Path=..."
+- File: index.md
+  Preview: "# iFixInvalidity Bienvenue dans la documentation de **iFixInvalidity**. Utilisez le menu **API** ci-dessus pour parcourir les classes et méthodes disp..."
+- File: install-docfx-automatic.ps1
+  Preview: "<# Script PowerShell : télécharge et installe docfx (binaire) dans %USERPROFILE%\.dotnet\tools - Télécharge https://github.com/dotnet/docfx/releases/l..."
+- File: install-docfx-from-nuget.ps1
+  Preview: "<# Télécharge le package NuGet docfx.console (dernier) et extrait docfx.exe vers %USERPROFILE%\.dotnet\tools Usage: .\install-docfx-from-nuget.ps1 [-R..."
+- File: start-docs.ps1
+  Preview: "# # Lance les serveurs DocFX et ouvre les sites dans le navigateur. # Double-cliquez ou lancez avec : pwsh -File .\start-docs.ps1 # $docfx  = '$env:US..."
+- File: toc.yml
+  Preview: "- name: Accueil  href: index.md - name: API  href: api/ "
+- File: write-outilsts-docfx.ps1
+  Preview: "$dest = (Resolve-Path '..\Classe-outils-topsolid\Classe outils topsolid').Path $destFile = Join-Path $dest 'docfx.json' # Copier OutilsTs.dll ET le XM..."
+- File: .github\copilot-instructions.md
+  Preview: "<Project>  <PropertyGroup>   <!-- Pour projets non-SDK, DocumentationFile est pris en compte ; pour SDK-style on utiliserait GenerateDocumentationFile..."
+- File: api\iFixInvalidity.Form1.yml
+  Preview: "### YamlMime:ManagedReference items: - uid: iFixInvalidity.Form1  commentId: T:iFixInvalidity.Form1  id: Form1  parent: iFixInvalidity  children:  - i..."
+- File: api\iFixInvalidity.FormulaireConfig.yml
+  Preview: "### YamlMime:ManagedReference items: - uid: iFixInvalidity.FormulaireConfig  commentId: T:iFixInvalidity.FormulaireConfig  id: FormulaireConfig  paren..."
+- File: api\iFixInvalidity.yml
+  Preview: "### YamlMime:ManagedReference items: - uid: iFixInvalidity  commentId: N:iFixInvalidity  id: iFixInvalidity  children:  - iFixInvalidity.Form1  - iFix..."
+- File: api\toc.yml
+  Preview: "### YamlMime:TableOfContent - uid: iFixInvalidity  name: iFixInvalidity  items:  - uid: iFixInvalidity.Form1   name: Form1  - uid: iFixInvalidity.Form..."
+- File: deploy\deploy_update.ps1
+  Preview: "<# .SYNOPSIS   Compile une application, fabrique son programme d'installation Inno Setup et le publie sur un   partage réseau avec le fichier update.x..."
+- File: iFixInvalidity\Electrode.cs
+  Preview: "using System; using System.Collections.Generic; using System.ComponentModel; using System.Data; using System.Drawing; using System.Linq; using System...."
+- File: iFixInvalidity\Form1.cs
+  Preview: "using OutilsTs; using System; using System.Collections.Generic; using System.ComponentModel; using System.Data; using System.Diagnostics; using System..."
+- File: iFixInvalidity\Form1.Designer.cs
+  Preview: "namespace iFixInvalidity {   partial class Form1   {     /// <summary>     /// Variable nécessaire au concepteur.     /// </summary>     private Syste..."
+- File: iFixInvalidity\FormulaireConfig.cs
+  Preview: "using System; using System.Collections.Generic; using System.ComponentModel; using System.Data; using System.Drawing; using System.Linq; using System...."
+- File: iFixInvalidity\FormulaireConfig.Designer.cs
+  Preview: "namespace iFixInvalidity {   partial class FormulaireConfig   {     /// <summary>     /// Required designer variable.     /// </summary>     private S..."
+- File: iFixInvalidity\Outils_Perso_TS_Automation.cs
+  Preview: "using System; using System.Collections.Generic; using System.Linq; using System.Text; using System.Threading.Tasks; namespace iFixInvalidity {   inter..."
+- File: iFixInvalidity\Program.cs
+  Preview: "using System; using System.Collections.Generic; using System.ComponentModel; using System.Data; using System.Drawing; using System.Linq; using System...."
+- File: _site_ifix\manifest.json
+  Preview: "{  'homepages': [],  'source_base_path': 'D:/Code/source/repos/NorinRad39/iFixInvalidity',  'xrefmap': 'xrefmap.yml',  'files': [   {    'type': 'Mana..."
+- File: _site_ifix\search-stopwords.json
+  Preview: "[  'a',  'able',  'about',  'across',  'after',  'all',  'almost',  'also',  'am',  'among',  'an',  'and',  'any',  'are',  'as',  'at',  'be',  'bec..."
+- File: _site_ifix\xrefmap.yml
+  Preview: "### YamlMime:XRefMap sorted: true references: - uid: iFixInvalidity  name: iFixInvalidity  href: api/iFixInvalidity.html  commentId: N:iFixInvalidity ..."
+- File: iFixInvalidity\Build_Document\BibliothequeEnum.cs
+  Preview: "using OutilsTs; using System; using System.Collections.Generic; using System.ComponentModel; using System.Data; using System.Diagnostics; using System..."
+- File: iFixInvalidity\Build_Document\DocBuild.cs
+  Preview: "using OutilsTs; using System; using System.Collections.Generic; using System.ComponentModel; using System.Data; using System.Diagnostics; using System..."
+- File: iFixInvalidity\Build_Document\FormEnumValues.cs
+  Preview: "using OutilsTs; using System; using System.Collections.Generic; using System.Drawing; using System.Linq; using System.Windows.Forms; using TopSolid.Ke..."
+- File: iFixInvalidity\Build_Document\MainDocBuild.cs
+  Preview: "using OutilsTs; using System; using System.Collections.Generic; using TopSolid.Cad.Design.Automating; using TopSolid.Kernel.Automating; using TSH = To..."
+- File: iFixInvalidity\Properties\AssemblyInfo.cs
+  Preview: "using System.Reflection; using System.Runtime.CompilerServices; using System.Runtime.InteropServices; // Les informations générales relatives à un ass..."
+- File: iFixInvalidity\Properties\Resources.Designer.cs
+  Preview: "//------------------------------------------------------------------------------ // <auto-generated> //   Ce code a été généré par un outil. //   Vers..."
+- File: iFixInvalidity\Properties\Settings.Designer.cs
+  Preview: "//------------------------------------------------------------------------------ // <auto-generated> //   Ce code a été généré par un outil. //   Vers..."
+- File: _site_ifix\styles\docfx.js
+  Preview: "// Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See LICENSE file in the project root for full license information. $(..."
+- File: _site_ifix\styles\docfx.vendor.js
+  Preview: "!function(e,t){'use strict';'object'==typeof module&&'object'==typeof module.exports?module.exports=e.document?t(e,!0):function(e){if(!e.document)thro..."
+- File: _site_ifix\styles\lunr.js
+  Preview: "/** * lunr - http://lunrjs.com - A bit like Solr, but much smaller and not as bright - 2.1.2 * Copyright (C) 2017 Oliver Nightingale * @license MIT */..."
+- File: _site_ifix\styles\lunr.min.js
+  Preview: "(function(){var lunr=function(config){var builder=new lunr.Builder;builder.pipeline.add(lunr.trimmer,lunr.stopWordFilter,lunr.stemmer);builder.searchP..."
+- File: _site_ifix\styles\main.js
+  Preview: "// Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See LICENSE file in the project root for full license information. "
+- File: _site_ifix\styles\search-worker.js
+  Preview: "(function () {  importScripts('lunr.min.js');  var lunrIndex;  var stopWords = null;  var searchData = {};  lunr.tokenizer.separator = /[\s\-\.\(\)]+/..."
