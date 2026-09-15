@@ -32,17 +32,23 @@ namespace iFixInvalidity.Build_Document
     /// </summary>
     internal static class BibliothequeEnum
     {
+        #region Constantes et utilitaires
+
         /// <summary>
         /// Libellés de l'énumération <c>enumDocuType</c> — source unique partagée.
         /// </summary>
         internal static readonly string DocuTypeStr =
-            "Assemblage,Piéce,Electrode,Ensemble élec,Brut électrode,Electrode parallélisée,Air projetée électrode,Prépa élec,Prépa pièces,Usinage électrode,Usinage pièce,Liste outils élec,Liste outils piéces";
+            "Assemblage,Piéce,Electrode,Ensemble élec,Brut électrode,Electrode parallélisée,Air projetée électrode,Prépa élec,Prépa pièces,Usinage électrode,Usinage pièce,Liste outils élec,Liste outils piéces,Liasse de plans";
 
         /// <summary>
         /// Retourne la liste des libellés de l'énumération <c>enumDocuType</c>.
         /// </summary>
         internal static List<string> GetEnumTextValues()
             => DocuTypeStr.Split(',').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)).ToList();
+
+        #endregion
+
+        #region Gestion bibliothèque et documents
 
         /// <summary>
         /// Vérifie l'existence d'une bibliothèque PDM nommée <c>docuType</c> parmi toutes les
@@ -74,7 +80,11 @@ namespace iFixInvalidity.Build_Document
         /// <c>docuType</c> n'existe que dans la corbeille et qu'aucune création n'a été possible.
         /// </returns>
         /// <remarks>
-        /// Des boîtes de dialogue (<see cref="System.Windows.Forms.MessageBox"/>) sont affichées
+        /// Des boîtes de dialogue (<see cref="System.Windows.Forms.
+        /// 
+        /// 
+        /// 
+        /// "/>) sont affichées
         /// pour informer l'utilisateur du résultat de chaque scénario (existence, présence en
         /// corbeille ou création réussie).
         /// </remarks>
@@ -321,6 +331,10 @@ namespace iFixInvalidity.Build_Document
         //    }
         //}
 
+        #endregion
+
+        #region Lecture et sélection des valeurs
+
         /// <summary>
         /// Récupère les valeurs de l'énumération utilisateur depuis le document <c>enumDocuType</c>.
         /// </summary>
@@ -354,5 +368,7 @@ namespace iFixInvalidity.Build_Document
             }
             return (-1, string.Empty);
         }
+
+        #endregion
     }
 }

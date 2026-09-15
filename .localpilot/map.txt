@@ -1,5 +1,5 @@
 ## WORKSPACE EXECUTIVE SUMMARY (YAML)
-# Generated: 2026-09-14T21:01:04.9785610+02:00
+# Generated: 2026-09-15T21:41:11.0971968+02:00
 # Root: D:\Code\source\repos\NorinRad39\iFixInvalidity
 Architecture:
   Type: Backend (C#/.NET)
@@ -46,12 +46,15 @@ Architecture:
 - File: iFixInvalidity\Form1.cs
   Preview: "using OutilsTs; using System; using System.Collections.Generic; using System.ComponentModel; using System.Data; using System.Diagnostics; using System..."
 - File: iFixInvalidity\Form1.Designer.cs
+  Symbols: [Form1]
   Preview: "namespace iFixInvalidity {   partial class Form1   {     /// <summary>     /// Variable nécessaire au concepteur.     /// </summary>     private Syste..."
 - File: iFixInvalidity\FormulaireConfig.cs
   Preview: "using System; using System.Collections.Generic; using System.ComponentModel; using System.Data; using System.Drawing; using System.Linq; using System...."
 - File: iFixInvalidity\FormulaireConfig.Designer.cs
+  Symbols: [FormulaireConfig]
   Preview: "namespace iFixInvalidity {   partial class FormulaireConfig   {     /// <summary>     /// Required designer variable.     /// </summary>     private S..."
 - File: iFixInvalidity\Outils_Perso_TS_Automation.cs
+  Symbols: [Outil_Perso_TS_Automation]
   Preview: "using System; using System.Collections.Generic; using System.Linq; using System.Text; using System.Threading.Tasks; namespace iFixInvalidity {   inter..."
 - File: iFixInvalidity\Program.cs
   Preview: "using System; using System.Collections.Generic; using System.ComponentModel; using System.Data; using System.Drawing; using System.Linq; using System...."
@@ -62,12 +65,15 @@ Architecture:
 - File: _site_ifix\xrefmap.yml
   Preview: "### YamlMime:XRefMap sorted: true references: - uid: iFixInvalidity  name: iFixInvalidity  href: api/iFixInvalidity.html  commentId: N:iFixInvalidity ..."
 - File: iFixInvalidity\Build_Document\BibliothequeEnum.cs
+  Symbols: [BibliothequeEnum, CheckLib, EditEnumDocument, CheckEnum, catch, CheckUserPropertyDocument, GetEnumValuesFromDocument, AfficherEnumValues]
   Preview: "using OutilsTs; using System; using System.Collections.Generic; using System.ComponentModel; using System.Data; using System.Diagnostics; using System..."
 - File: iFixInvalidity\Build_Document\DocBuild.cs
+  Symbols: [DocBuild, catch, CreateEnumParam]
   Preview: "using OutilsTs; using System; using System.Collections.Generic; using System.ComponentModel; using System.Data; using System.Diagnostics; using System..."
 - File: iFixInvalidity\Build_Document\FormEnumValues.cs
   Preview: "using OutilsTs; using System; using System.Collections.Generic; using System.Drawing; using System.Linq; using System.Windows.Forms; using TopSolid.Ke..."
 - File: iFixInvalidity\Build_Document\MainDocBuild.cs
+  Symbols: [GestionBibliothequeEnum, réel, de, MainDocBuild]
   Preview: "using OutilsTs; using System; using System.Collections.Generic; using TopSolid.Cad.Design.Automating; using TopSolid.Kernel.Automating; using TSH = To..."
 - File: iFixInvalidity\Properties\AssemblyInfo.cs
   Preview: "using System.Reflection; using System.Runtime.CompilerServices; using System.Runtime.InteropServices; // Les informations générales relatives à un ass..."
