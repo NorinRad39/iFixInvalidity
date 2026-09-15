@@ -24,16 +24,15 @@ using TSEH = TopSolid.Cad.Electrode.Automating.TopSolidElectrodeHost;
 using TSH = TopSolid.Kernel.Automating.TopSolidHost;
 using TSHD = TopSolid.Cad.Design.Automating.TopSolidDesignHost;
 
-namespace iFixInvalidity
+namespace iFixInvalidity.Build_Document
 {
     internal class DocBuild
     {
-        public static ElementId CreateEnumParam(DocumentId currentDoc ,DocumentId enumDocId, int enumValue)
+        public static ElementId CreateEnumParam(DocumentId currentDoc ,DocumentId enumDocId, int intEnumValue, string textEnumValue)
         {
-            DocumentId docId = TSH.Documents.EditedDocument;
-
+          
             // Étape 1 : Valider que l'identifiant du document fourni n'est pas vide
-            if (docId.IsEmpty)
+            if (currentDoc.IsEmpty)
                 throw new InvalidOperationException("Aucun document en cours d'édition.");
 
             // Étape 2 : Démarrer une transaction de modification TopSolid
@@ -43,10 +42,12 @@ namespace iFixInvalidity
             try
             {
                 // Étape 3 : Marquer le document comme modifié (dirty) pour forcer la sauvegarde
-                TSH.Documents.EnsureIsDirty(ref docId);
+                TSH.Documents.EnsureIsDirty(ref currentDoc);
 
-                var elementId = TSH.Parameters.CreateUserEnumParameter(docId, enumDocId);
-                TSH.Parameters.SetIntegerValue(elementId, enumValue);
+                var elementId = TSH.Parameters.CreateUserEnumParameter(currentDoc, enumDocId);
+                
+                TSH.Parameters.SetIntegerValue(elementId, intEnumValue);
+                TSH.Parameters.set
 
                 // Étape 7 : Valider et clôturer la transaction avec succès
                 TSH.Application.EndModification(true, true);

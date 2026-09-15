@@ -85,37 +85,42 @@ namespace iFixInvalidity.Build_Document
 
             PDM.RefLibrary(PDM.GetCurrentProjectPdmObject(), libDocuType);
 
-           
+            #endregion
 
-            // Récupérer le premier élément à l'intérieur du fichier d'énumération (la définition de l'enum)
+            #region gestion document de propriété utilisateur userPropertyDocuType
+            // Récupère tous les éléments portés par le document d'énumération.
+            // L'index `1` correspond ici à la définition exploitable de l'énumération
+            // utilisée ensuite pour le paramétrage métier.
             List<ElementId> enumElements = TSH.Elements.GetElements(enumDoc.DocId);
+
+            // Conserve le type réel du document d'énumération.
+            // Cette information peut servir à vérifier que le document manipulé
+            // correspond bien à une définition d'énumération attendue.
             Guid enumDocGuid = TSH.Documents.GetTypeGuid(enumDoc.DocId);
+
+            // Référence l'élément de définition de l'énumération dans le document.
             ElementId enumDefinitionId = enumElements[1];
-            DocumentId currentDoc = TSH.Documents.EditedDocument;
 
-            if (TopSolidHost.Application.StartModification("Création Paramètre via Enum Directe", false))
-            {
-                try
-                {
-                    // 2. Création d'un paramètre entier standard
-                    ElementId paramId = TSH.Parameters.CreateIntegerParameter(currentDoc, 0 );
-
-                    TSH.Parameters.SetEnumerationValue(paramId, 1);
-
-                    TopSolidHost.Application.EndModification(true, true);
-                }
-                catch (Exception ex)
-                {
-                    TopSolidHost.Application.EndModification(false, false);
-                }
-            }
-
+            // Cible le document actuellement édité dans lequel le paramètre sera créé.
+            Document currentDoc = new Document();
 
             //DocBuild.CreateEnumParam(enumDocId.DocId);
+            // Ouvre une fenêtre permettant à l'utilisateur de choisir une valeur dans l'énumération
+            // `enumDocuType` et récupère un tuple :
+            //  - `intEnumValue`  : identifiant entier PDM de la valeur sélectionnée (-1 si l'utilisateur annule)
+            //  - `textEnumValue` : libellé textuel associé (chaîne vide si l'utilisateur annule)
+            // Remarque : la méthode `BibliothequeEnum.AfficherEnumValues()` retourne `(-1, string.Empty)`
+            // si la boîte de dialogue est annulée — le code appelant doit vérifier `intValue` pour
+            // détecter une annulation avant d'utiliser les valeurs.
+            var (intEnumValue, textEnumValue) = BibliothequeEnum.AfficherEnumValues();
 
-            var (intValue, textValue) = BibliothequeEnum.AfficherEnumValues();
+            DocBuild.CreateEnumParam(currentDoc.DocId, enumDoc.DocId, intEnumValue, textEnumValue);
 
             #endregion
+
+
+
+
 
 
 
