@@ -24,7 +24,7 @@ using TSEH = TopSolid.Cad.Electrode.Automating.TopSolidElectrodeHost;
 using TSH = TopSolid.Kernel.Automating.TopSolidHost;
 using TSHD = TopSolid.Cad.Design.Automating.TopSolidDesignHost;
 using System.Globalization;
-using System.Text;
+
 
 
 namespace iFixInvalidity.Build_Document
@@ -181,11 +181,7 @@ namespace iFixInvalidity.Build_Document
         /// <c>docuType</c> n'existe que dans la corbeille et qu'aucune création n'a été possible.
         /// </returns>
         /// <remarks>
-        /// Des boîtes de dialogue (<see cref="System.Windows.Forms.
-        /// 
-        /// 
-        /// 
-        /// "/>) sont affichées
+        /// Des boîtes de dialogue (<see cref="System.Windows.Forms.MessageBox"/>) sont affichées
         /// pour informer l'utilisateur du résultat de chaque scénario (existence, présence en
         /// corbeille ou création réussie).
         /// </remarks>
@@ -346,12 +342,12 @@ namespace iFixInvalidity.Build_Document
                 TSH.Parameters.SetUserEnumerationValues(enumDocument, intValues, text);
 
                 // Étape 7 : Valider et clôturer la transaction avec succès
-                TopSolidHost.Application.EndModification(true, true);
+                TSH.Application.EndModification(true, true);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Étape 8 (erreur) : Annuler la transaction pour ne pas corrompre le document
-                TopSolidHost.Application.EndModification(false, false);
+                TSH.Application.EndModification(false, false);
             }
         }
 

@@ -26,7 +26,10 @@ using TSHD = TopSolid.Cad.Design.Automating.TopSolidDesignHost;
 
 namespace iFixInvalidity
 {
-
+    /// <summary>
+    /// Formulaire principal de l'application iFixInvalidity.
+    /// Gère l'interface utilisateur, la connexion aux hôtes TopSolid et les opérations sur les documents.
+    /// </summary>
     public partial class Form1 : Form
     {
         #region Champs privés / propriétés

@@ -1,10 +1,11 @@
-<Project>
+# Copilot Instructions
+
+## Project Configuration<Project>
   <PropertyGroup>
     <!-- Pour projets non-SDK, DocumentationFile est pris en compte ; pour SDK-style on utiliserait GenerateDocumentationFile -->
     <DocumentationFile>bin\$(Configuration)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
 </Project>
-
 ---
 
 ## Pipeline DocFX — documentation automatique
@@ -33,53 +34,55 @@
 
 ### Procédure sur une nouvelle machine
 
-```powershell
-# 1. Cloner les deux repos côte à côte (même dossier parent)
-git clone https://github.com/NorinRad39/iFixInvalidity
-git clone https://github.com/NorinRad39/Classe-outils-topsolid
-
-# 2. Installer DocFX (une seule fois par machine)
-cd iFixInvalidity
-pwsh -ExecutionPolicy Bypass -File .\install-docfx-from-nuget.ps1
-
-# 3. Ouvrir iFixInvalidity.sln dans Visual Studio et builder (Build Solution)
-#    → la documentation se génère automatiquement en arrière-plan après chaque build
-
-# 4. Ouvrir la documentation dans le navigateur
-pwsh -File .\start-docs.ps1
-```
+1. Cloner les deux repos côte à côte (même dossier parent)
+    ```bash
+    git clone https://github.com/NorinRad39/iFixInvalidity
+    git clone https://github.com/NorinRad39/Classe-outils-topsolid
+    ```
+2. Installer DocFX (une seule fois par machine)
+    ```powershell
+    cd iFixInvalidity
+    pwsh -ExecutionPolicy Bypass -File .\install-docfx-from-nuget.ps1
+    ```
+3. Ouvrir `iFixInvalidity.sln` dans Visual Studio et builder (Build Solution)
+    > ! La documentation se génère automatiquement en arrière-plan après chaque build
+4. Ouvrir la documentation dans le navigateur
+    ```powershell
+    pwsh -File .\start-docs.ps1
+    ```
 
 ### Ouvrir la doc manuellement (sans builder)
 
-```powershell
-cd C:\...\iFixInvalidity
-
-# Générer pour les deux projets
-.\generate-docs.ps1 -Configuration Debug -Platform x64
-
-# Ou un seul projet
-.\generate-docs.ps1 -Project iFixInvalidity -Configuration Debug -Platform AnyCPU
-.\generate-docs.ps1 -Project OutilsTs -Configuration Release -Platform x64
-
-# Puis ouvrir dans le navigateur
-.\start-docs.ps1
-```
+1. Accéder au répertoire du projet
+    ```powershell
+    cd C:\...\iFixInvalidity
+    ```
+2. Générer pour les deux projets
+    ```powershell
+    .\generate-docs.ps1 -Configuration Debug -Platform x64
+    ```
+   - Ou un seul projet
+    ```powershell
+    .\generate-docs.ps1 -Project iFixInvalidity -Configuration Debug -Platform AnyCPU
+    .\generate-docs.ps1 -Project OutilsTs -Configuration Release -Platform x64
+    ```
+3. Puis ouvrir dans le navigateur
+    ```powershell
+    .\start-docs.ps1
+    ```
 
 ### URLs des sites (via start-docs.ps1)
 
 - **iFixInvalidity** → http://localhost:8080
 - **OutilsTs** → http://localhost:8081
 
-> ⚠️ Ne pas ouvrir les `index.html` directement depuis l'explorateur : le menu JS ne s'affiche pas en `file://`.
-> Toujours passer par `start-docs.ps1` ou `docfx serve`.
+> ⚠️ Ne pas ouvrir les `index.html` directement depuis l'explorateur : le menu JS ne s'affiche pas en `file://`. Toujours passer par `start-docs.ps1` ou `docfx serve`.
 
 ### Désactiver temporairement la génération auto
-
-```powershell
 # Dans MSBuild (ligne de commande)
+```bash
 msbuild iFixInvalidity.sln /p:GenerateDocFXEnabled=false
 ```
-
 ### Logique conditionnelle
 
 - Utiliser un `switch` avec plusieurs cas sur `textEnumValue` pour la logique conditionnelle multi-cas dans ce projet.
