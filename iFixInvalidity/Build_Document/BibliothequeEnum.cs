@@ -23,6 +23,9 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
 using TSEH = TopSolid.Cad.Electrode.Automating.TopSolidElectrodeHost;
 using TSH = TopSolid.Kernel.Automating.TopSolidHost;
 using TSHD = TopSolid.Cad.Design.Automating.TopSolidDesignHost;
+using System.Globalization;
+using System.Text;
+
 
 namespace iFixInvalidity.Build_Document
 {
@@ -34,17 +37,115 @@ namespace iFixInvalidity.Build_Document
     {
         #region Constantes et utilitaires
 
-        /// <summary>
-        /// Libellés de l'énumération <c>enumDocuType</c> — source unique partagée.
+                /// <summary>
+        /// Définit les libellés métier des types de documents utilisés dans l'énumération `DocuType`.
         /// </summary>
-        internal static readonly string DocuTypeStr =
-            "Assemblage,Piéce,Electrode,Ensemble élec,Brut électrode,Electrode parallélisée,Air projetée électrode,Prépa élec,Prépa pièces,Usinage électrode,Usinage pièce,Liste outils élec,Liste outils piéces,Liasse de plans";
+        internal static class DocuTypes
+        {
+            /// <summary>Type de document d'assemblage.</summary>
+            internal const string Assemblage = "Assemblage";
+
+            /// <summary>Type de document de pièce.</summary>
+            internal const string Piece = "Piéce";
+
+            /// <summary>Type de document d'électrode.</summary>
+            internal const string Electrode = "Electrode";
+
+            /// <summary>Type de document d'ensemble électrode.</summary>
+            internal const string EnsembleElec = "Ensemble élec";
+
+            /// <summary>Type de document de brut d'électrode.</summary>
+            internal const string BrutElectrode = "Brut électrode";
+
+            /// <summary>Type de document d'électrode parallélisée.</summary>
+            internal const string ElectrodeParallelisee = "Electrode parallélisée";
+
+            /// <summary>Type de document d'air projetée pour électrode.</summary>
+            internal const string AirProjeteeElectrode = "Air projetée électrode";
+
+            /// <summary>Type de document de préparation électrode.</summary>
+            internal const string PrepaElec = "Prépa élec";
+
+            /// <summary>Type de document de préparation pièces.</summary>
+            internal const string PrepaPieces = "Prépa pièces";
+
+            /// <summary>Type de document d'usinage électrode.</summary>
+            internal const string UsinageElectrode = "Usinage électrode";
+
+            /// <summary>Type de document d'usinage pièce.</summary>
+            internal const string UsinagePiece = "Usinage pièce";
+
+            /// <summary>Type de document de liste d'outils électrode.</summary>
+            internal const string ListeOutilsElec = "Liste outils élec";
+
+            /// <summary>Type de document de liste d'outils pièces.</summary>
+            internal const string ListeOutilsPieces = "Liste outils piéces";
+
+            /// <summary>Type de document de liasse de plans.</summary>
+            internal const string LiasseDePlans = "Liasse de plans";
+        }
 
         /// <summary>
-        /// Retourne la liste des libellés de l'énumération <c>enumDocuType</c>.
+        /// Représentation CSV de tous les types de documents supportés, dans l'ordre métier.
         /// </summary>
+        internal static readonly string DocuTypeStr =
+            string.Join(",",
+                DocuTypes.Assemblage,
+                DocuTypes.Piece,
+                DocuTypes.Electrode,
+                DocuTypes.EnsembleElec,
+                DocuTypes.BrutElectrode,
+                DocuTypes.ElectrodeParallelisee,
+                DocuTypes.AirProjeteeElectrode,
+                DocuTypes.PrepaElec,
+                DocuTypes.PrepaPieces,
+                DocuTypes.UsinageElectrode,
+                DocuTypes.UsinagePiece,
+                DocuTypes.ListeOutilsElec,
+                DocuTypes.ListeOutilsPieces,
+                DocuTypes.LiasseDePlans);
+
+                /// <summary>
+        /// Retourne la liste des libellés métiers des types de documents pris en charge,
+        /// dans l'ordre défini par <see cref="DocuTypeStr"/>.
+        /// </summary>
+        /// <returns>
+        /// Une liste de chaînes contenant les valeurs textuelles des types de documents,
+        /// avec les espaces de début et de fin supprimés.
+        /// </returns>
         internal static List<string> GetEnumTextValues()
-            => DocuTypeStr.Split(',').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)).ToList();
+        {
+            // Retourne les libellés métiers dans l'ordre défini (réutilise DocuTypeStr)
+            return DocuTypeStr
+                .Split(new[] { ',' }, StringSplitOptions.None)
+                .Select(s => s.Trim())
+                .ToList();
+        }
+
+        /// <summary>
+        /// Normalise un type de document pour faciliter les comparaisons textuelles.
+        /// </summary>
+        /// <param name="value">Libellé à normaliser.</param>
+        /// <returns>
+        /// Une chaîne trimée, sans diacritiques et convertie en majuscules invariantes.
+        /// Retourne une chaîne vide si la valeur d'entrée est `null`, vide ou blanche.
+        /// </returns>
+        internal static string NormalizeDocuType(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            string normalized = value.Trim().Normalize(NormalizationForm.FormD);
+            var builder = new StringBuilder(normalized.Length);
+
+            foreach (char c in normalized)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                    builder.Append(char.ToUpperInvariant(c));
+            }
+
+            return builder.ToString().Normalize(NormalizationForm.FormC);
+        }
 
         #endregion
 

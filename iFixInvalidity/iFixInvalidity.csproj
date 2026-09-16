@@ -94,6 +94,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Build_Document\BibliothequeEnum.cs" />
+    <Compile Include="Build_Document\Build_Piece.cs" />
     <Compile Include="Build_Document\DocBuild.cs" />
     <Compile Include="Build_Document\FormEnumValues.cs">
       <SubType>Form</SubType>
