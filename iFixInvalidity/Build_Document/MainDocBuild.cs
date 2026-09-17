@@ -151,16 +151,17 @@ namespace iFixInvalidity.Build_Document
             switch (textEnumValue)
             {
                 case BibliothequeEnum.DocuTypes.Piece:
+                    Build_Piece.BuildPiece(currentDoc);
                   break;
 
                 case BibliothequeEnum.DocuTypes.LiasseDePlans:
-                    // Build_Assemblage.BuildAssemblage(currentDoc.DocId);
+                    Build_LiasseDePlans.BuildLiasseDePlans(currentDoc);
                     break;
 
                 case BibliothequeEnum.DocuTypes.Electrode:
                 case BibliothequeEnum.DocuTypes.ElectrodeParallelisee:
                 case BibliothequeEnum.DocuTypes.BrutElectrode:
-                    // Build_Electrode.BuildElectrode(currentDoc.DocId);
+                    // Build_Electrode.BuildElectrode(currentDoc);
                     break;
 
                 default:
