@@ -86,4 +86,5 @@ msbuild iFixInvalidity.sln /p:GenerateDocFXEnabled=false
 ### Logique conditionnelle
 
 - Utiliser un `switch` avec plusieurs cas sur `textEnumValue` pour la logique conditionnelle multi-cas dans ce projet.
+- Éviter les `case` redondants dans le `switch` et s’appuyer sur `BibliothequeEnum.DocuTypes` comme source unique.
 

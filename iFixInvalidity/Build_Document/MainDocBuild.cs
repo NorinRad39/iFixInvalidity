@@ -148,17 +148,18 @@ namespace iFixInvalidity.Build_Document
 
             DocBuild.CreateEnumParam(currentDoc.DocId, enumDoc.DocId, intEnumValue, textEnumValue);
 
-            switch (BibliothequeEnum.NormalizeDocuType(textEnumValue))
+            switch (textEnumValue)
             {
-                case "PIECE":
-                    Build_Piece.BuildPiece(currentDoc.DocId);
-                    break;
+                case BibliothequeEnum.DocuTypes.Piece:
+                  break;
 
-                case "ASSEMBLAGE":
+                case BibliothequeEnum.DocuTypes.LiasseDePlans:
                     // Build_Assemblage.BuildAssemblage(currentDoc.DocId);
                     break;
 
-                case "ELECTRODE":
+                case BibliothequeEnum.DocuTypes.Electrode:
+                case BibliothequeEnum.DocuTypes.ElectrodeParallelisee:
+                case BibliothequeEnum.DocuTypes.BrutElectrode:
                     // Build_Electrode.BuildElectrode(currentDoc.DocId);
                     break;
 
